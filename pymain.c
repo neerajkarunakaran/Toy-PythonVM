@@ -5,37 +5,56 @@
 #include "operation.h"
 
 #define SIZEOF_LONG 8
+typedef struct pyobject_t{
+    int type;
+    int value;
+    char *string;
+}pyobject;
+
+typedef struct STACK_t{
+    int top;
+    int size;
+    pyobject *stack;
+}STACK;
+STACK * create_new_stack(int size)
+{
+    STACK *new = (STACK *) malloc(sizeof(STACK));
+    new->top = -1;
+    new->size = size; 
+    new->stack = (pyobject *) malloc(size * sizeof(pyobject));
+    return new;
+}
 
 int main(int argc, char **argv)
 {
     FILE *fp;
     static int type, i, stacksize, codesize, constsize, namesize, varnamesize, freevarsize, cellvarsize,  \
                argcount, nlocals, filenamesize, mnamesize, firstlineno, top, topl;
- /*   struct pyobject_t {
-    uint8_t type;
 
-        uint8_t u8;
-        int8_t i8;
-        uint32_t u32;
-        int32_t i32;
-        void *ptr;
 
-} ;
-typedef struct pyobject_t pyot;
-typedef  pyot *pyobject;
 
-struct STACK_t {
-    int top;
-    int size;
-    pyobject *stack; 
-};
-typedef struct STACK_t STCK;
-typedef STCK STACK;
-typedef STACK *ST;   */
-    int *consts;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     void **execstack, **localstack;
     
-    char **names, *filename, *name;
+    char  *filename, *name;
     int stringsize, x, y, z;
 
 
@@ -62,8 +81,8 @@ typedef STACK *ST;   */
     }
     r_byte(fp);
     constsize = r_value(4, fp);
- //   STACK *consts = create_new_stack(constsize);
-  consts = (int *) malloc(constsize * sizeof(int));
+   STACK *consts = create_new_stack(constsize);
+
     if(consts == NULL) {
         perror("consts alloc error");
         exit(1);
@@ -73,32 +92,34 @@ typedef STACK *ST;   */
     for(i = 0; i < constsize; i++) {
         type = r_byte(fp);
         if(type == 'i') {
-            consts[i] = r_value(4, fp);
-         //   consts->stack[i].type = 'i';
-         //   consts->stack[i].i32 = r_value(4, fp);           
+
+       consts->stack[i].type = 'i';
+       consts->stack[i].value = r_value(4, fp);           
             
         } 
         if(type == 'N') {
-         consts[i] = 0;
-       //     consts->stack[i].type = 'N';
-         //   consts->stack[i].i32 = 0;
+
+           consts->stack[i].type = 'N';
+         consts->stack[i].value = 0;
             
         }
-    }  printf("consts (\n"); for(i = 0; i < constsize; i++ ) { printf("%d\n ", consts[i]); }
+    }  printf("consts (\n"); for(i = 0; i < constsize; i++ ) { printf("%d\n ", consts->stack[i].value); }
 
     
     r_byte(fp);         
-    namesize = (int) r_value(4, fp); 
-    for(i = 0; i < namesize; i++) {   
-        names = (char **) malloc(20 * sizeof(char*));
-    }
+    namesize = (int) r_value(4, fp);
+
+    STACK *names = create_new_stack(namesize); 
+
+
+
     for(i = 0; i < namesize; i++) {
-        r_byte(fp); 
+        names->stack[i].type = (int) r_byte(fp); 
         stringsize = (int) r_value(4, fp);
 
-        names[i] = r_bytes(stringsize, fp);
+        names->stack[i].string = r_bytes(stringsize, fp);
 
-    }  printf("names\n"); for(i = 0; i < namesize; i++) { printf("%s\n", names[i]);}
+    }  printf("names\n"); for(i = 0; i < namesize; i++) { printf("%s\n", names->stack[i].string);}
    
         
        
