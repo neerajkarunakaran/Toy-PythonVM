@@ -1,0 +1,17 @@
+CC=gcc
+CFLAGS=-c -Wall
+
+all:pyvm
+
+pyvm: pymain.o operation.o
+	$CC pymain.o operation.o
+
+pymain.o: pymain.c opearation.c pyvm.h operation.h
+	$CC $CFLAGS pymain.c operation.c pyvm.h operation.h
+
+operation.o: operation.c operation.h pyvm.h
+	$CC $CFLAGS operation.c pyvm.h operation.h
+
+
+
+
