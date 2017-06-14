@@ -1,30 +1,40 @@
 
 
-#include "pyvm.h"
-#include "opcod.h"
-#include "operation.h"
 
+#include "opcod.h"
+#include "pyvm.h"
+#include <string.h>
+#include <math.h>
 #define SIZEOF_LONG 8
+
 typedef struct pyobject_t{
     int type;
     int value;
     char *string;
+    void *ptr;
+    float fl;
+    int ref;
 }pyobject;
 
 typedef struct STACK_t{
     int top;
     int size;
-    pyobject *stack;
-}STACK;
-STACK * create_new_stack(int size)
-{
-    STACK *new = (STACK *) malloc(sizeof(STACK));
-    new->top = -1;
-    new->size = size; 
-    new->stack = (pyobject *) malloc(size * sizeof(pyobject));
-    return new;
-}
+    pyobject **stack;
+}STACK; 
 
+
+
+
+
+
+
+/*
+double binarypower(double x, double y);  */
+STACK * create_new_datastack(int size);
+void push(STACK * u, pyobject *item);
+pyobject*  pop(STACK * u);
+STACK * create_new_stack(int size);
+pyobject * create_new_object();
 int main(int argc, char **argv)
 {
     FILE *fp;
@@ -33,6 +43,7 @@ int main(int argc, char **argv)
 
 
 
+    STACK * consts, *names;
 
 
 
@@ -52,8 +63,7 @@ int main(int argc, char **argv)
 
 
 
-    void **execstack, **localstack;
-    
+
     char  *filename, *name;
     int stringsize, x, y, z;
 
@@ -81,7 +91,8 @@ int main(int argc, char **argv)
     }
     r_byte(fp);
     constsize = r_value(4, fp);
-   STACK *consts = create_new_stack(constsize);
+    if((consts = create_new_datastack(constsize)) == NULL) {
+        printf("error: stack alloc @ 90\n"); }
 
     if(consts == NULL) {
         perror("consts alloc error");
@@ -93,42 +104,54 @@ int main(int argc, char **argv)
         type = r_byte(fp);
         if(type == 'i') {
 
-       consts->stack[i].type = 'i';
-       consts->stack[i].value = r_value(4, fp);           
+       consts->stack[i]->type = 'i';
+       consts->stack[i]->value = r_value(4, fp);           
             
         } 
         if(type == 'N') {
 
-           consts->stack[i].type = 'N';
-         consts->stack[i].value = 0;
+           consts->stack[i]->type = 'N';
+         consts->stack[i]->value = 0;
             
         }
-    }  printf("consts (\n"); for(i = 0; i < constsize; i++ ) { printf("%d\n ", consts->stack[i].value); }
+        if(type == 't' || type == 's') {
+            stringsize = (int) r_value(4, fp);
+            consts->stack[i]->type = 't';
+            consts->stack[i]->string = r_bytes(stringsize, fp);
+        }
+    }  printf("consts (\n"); for(i = 0; i < constsize; i++ ){
+            if(consts->stack[i]->type == 'i') { printf("%d\n", consts->stack[i]->value); }
+            if(consts->stack[i]->type == 't') { printf("%s\n", consts->stack[i]->string); }
+            if(consts->stack[i]->type == 'f') { printf("%f\n", consts->stack[i]->fl); }
+        }
 
     
     r_byte(fp);         
     namesize = (int) r_value(4, fp);
 
-    STACK *names = create_new_stack(namesize); 
+    names = create_new_datastack(namesize); 
 
 
 
     for(i = 0; i < namesize; i++) {
-        names->stack[i].type = (int) r_byte(fp); 
+        names->stack[i]->type = (int) r_byte(fp); 
         stringsize = (int) r_value(4, fp);
 
-        names->stack[i].string = r_bytes(stringsize, fp);
+        names->stack[i]->string = r_bytes(stringsize, fp);
 
-    }  printf("names\n"); for(i = 0; i < namesize; i++) { printf("%s\n", names->stack[i].string);}
+    }  printf("names(\n"); for(i = 0; i < namesize; i++) { printf("%s \n", names->stack[i]->string);}
    
         
        
     r_byte(fp);
     varnamesize = (int) r_value(4, fp);  printf("varname %s\n", (varnamesize == 0 ? "()" : "yes var"));
+    STACK *varname = create_new_datastack(varnamesize);
     r_byte(fp);
     freevarsize = (int) r_value(4, fp);  printf("freevar %s\n", (freevarsize == 0 ? "()" : " yes freevar"));
+    STACK * freevar = create_new_datastack(freevarsize);
     r_byte(fp);        
     cellvarsize = (int) r_value(4, fp); printf("cellvar %s\n", (cellvarsize == 0 ? "()" : "yes cellvar"));
+    STACK * cellvar = create_new_datastack(cellvarsize);
 
 
     if((type = r_byte(fp)) == 's') {
@@ -149,10 +172,18 @@ int main(int argc, char **argv)
     
     printf("Executing %s............................................................\n", filename);
     
-    execstack = (void **) malloc(stacksize * sizeof(void *));
-    localstack = (void **) malloc(namesize * sizeof(void *));
-    top = -1;
-    topl = -1;
+    STACK *mainstack;
+    if((mainstack = create_new_stack(stacksize)) == NULL) {
+        printf("stack alloc error @ 153\n"); } 
+
+
+ /*   push(mainstack, names->stack[0]); push(mainstack, names->stack[1]); push(mainstack, names->stack[2]); 
+ 
+    pyobject* item = pop(mainstack);  printf("%s\n", item->string);  
+    pyobject * item1 = pop(mainstack); printf("%s\n", item1->string);
+    pop(mainstack);
+    pyobject  *new = create_new_object(); new->string = "fgjh";
+    new->value = 67;  push(mainstack, new); item = pop(mainstack); printf("%d %s\n", item->value, item->string);  */
 
     if(fseek(fp, 0, SEEK_SET) < 0) {
         printf("%s fseek error @ 99\n", filename);
@@ -161,45 +192,238 @@ int main(int argc, char **argv)
     while((type = r_byte(fp)) != 's') {
         ;
     }
-    codesize = (int) r_value(4, fp);  printf("%d\n", codesize);
+    codesize = (int) r_value(4, fp); 
+    pyobject *temp, *temp1, *temp2, *result;
 
-
-    for(i = 54; i < codesize; i++) {
+    for(i = 0; i < codesize; i++) {
         type = (int) r_byte(fp);
         switch(type) {
+            case NOP :
+                break;
             case LOAD_CONST :
-                type = (int) r_byte(fp);
-                pushmain((void *) &consts[type], &top, execstack, &stacksize);
+                type = (int) r_byte(fp); 
+                push(mainstack, consts->stack[type]);
                 r_byte(fp); 
                 break;
             case STORE_NAME :
-                type = (int) r_byte(fp);
-                pushlocal((void *) &names[type], &topl, localstack, &namesize);
+                type = r_byte(fp);
+                names->stack[type]->ptr = (void*)pop(mainstack);
+                push(mainstack, (pyobject *)(names->stack[type]->ptr));
+                
+
                 r_byte(fp);
                 break;
             case LOAD_NAME :
-                r_byte(fp);
+                type = r_byte(fp);
+                push(mainstack, (pyobject *)(names->stack[type]->ptr));
                 r_byte(fp);
                 break;
             case BINARY_ADD :
-                x = *((int *)popmain(execstack, &top));
-                y = *((int *)popmain(execstack, &top));
-                z = add(x , y);
-                pushmain((void *) &z, &top, execstack, &stacksize);
+                result = create_new_object();
+                temp = pop(mainstack);
+                temp1 = pop(mainstack);
+                if(temp->type == 'i' && temp1->type == 'i') {
+                    result->value = add(temp->value, temp1->value);
+                    result->type = 'i'; }
+                if(temp->type == 't' && temp1->type == 't') {
+                    result->string = strcat(temp1->string, temp->string);
+                    result->type = 't'; }
+                push(mainstack, result);
                 break;
             case PRINT_ITEM :
-                printf("%d\n", *((int *)popmain(execstack, &top)));
+                
+                result = pop(mainstack);
+                if(result->type == 'i') {
+                    printf("%d\n", result->value); }
+                if(result->type == 't') {
+                    printf("%s", result->string); }
                 break;   
             case LOAD_FAST :
-                r_byte(fp); r_byte(fp); r_byte(fp); 
+                type = r_byte(fp);
+                push(mainstack, varname->stack[type]);  
                 break;
             case PRINT_NEWLINE :
                 printf("\n");
                 break;
             case RETURN_VALUE :
+                return pop(mainstack);
                 break;
- 
+            case DELETE_NAME :
+                type = r_byte(fp);
+                if((names->stack[type]->ref) == 0) {
+                    free(names->stack[type]); }
+                    r_byte(fp);
+                break;     
+            case LOAD_GLOBAL :
+                type = r_byte(fp);
+                push(mainstack, names->stack[type]);
+                break;
+            case ROT_TWO :
+     
+                temp = pop(mainstack);
+                temp1 = pop(mainstack);
+                push(mainstack, temp);
+                push(mainstack, temp1);
+                break;
+            case ROT_THREE :
+               
+                temp = pop(mainstack);
+                temp1 = pop(mainstack);
+                temp2 = pop(mainstack);
+                push(mainstack, temp);
+                push(mainstack, temp1);
+                push(mainstack, temp2);
+                break;
+         /*   case BINARY_POWER :
+           
+                result = create_new_object();
+                temp = pop(mainstack);
+                temp1 = pop(mainstack);
+                result->value = (int)binarypower((double)temp1->value, (double)temp->value);
+                result->type = 'i';
+                push(mainstack, result);
+                break;  */
+            case BINARY_MULTIPLY :
+    
+                result = create_new_object();
+                temp  = pop(mainstack);
+                temp1 = pop(mainstack);
                 
+                if(temp->type == 'i' && temp1->type == 'i') {
+
+                    result->value = (temp1->value) * (temp->value);
+                    result->type = 'i'; }
+                if(temp1->type == 'i' && temp->type == 'f' ){
+                    result->type = 'f';
+                    result->fl = (temp1->value) * (temp->fl);}
+                if(temp1->type == 'f' && temp->type == 'i') {
+                    result->type = 'f';
+                    result->fl = (temp1->fl) * (temp->value); }
+                if(temp1->type == 'f' && temp->type == 'f') {
+                    result->type = 'f';
+                    result->fl = (temp1->fl) * (temp->fl); }
+                if(temp1->type == 't' && temp->type == 'i') {
+                    
+  
+                    stringsize = strlen(temp1->string);
+
+
+                    stringsize = stringsize * (temp->value);
+            
+                    if((result->string = (char *)malloc(sizeof(char) *stringsize)) == NULL) {
+                        printf("error: realloc @293\n"); }
+                    for(i = 0; i < (temp->value); i++) {
+                        strcat(result->string, temp1->string); }
+                    result->type = 't'; }
+                push(mainstack, result);
+                break;
+
+            case BINARY_DEVIDE :
+
+                result = create_new_object();
+                temp = pop(mainstack);
+                temp1 = pop(mainstack);
+                if(temp1->type == 'i' && temp->type == 'i') {
+                    result->type = 'i';
+                    result->value = (temp1->value) / (temp->value); }
+                if(temp1->type == 'i' && temp->type == 'f') {
+                    result->type = 'f';
+                    result->fl = (temp1->value) / (temp->fl); }
+                if(temp1->type == 'f' && temp->type == 'i') {
+                    result->type = 'f';
+                    result->fl = (temp1->fl) / (temp->value); }
+                if(temp1->type == 'f' && temp->type == 'f') {
+                    result->type = 'f';
+                    result->fl = (temp1->fl) / (temp->fl); }
+                push(mainstack, result);
+                break;
+            
+            case BINARY_MODULO :
+                result = create_new_object();
+                temp = pop(mainstack);
+                temp1 = pop(mainstack);
+                if(temp1->type == 'i' && temp->type == 'i') {
+                    result->type = 'i';
+                    result->value = (temp1->value) % (temp->value); }
+                push(mainstack, result);
+                break;
+            case BINARY_FLOOR_DEVIDE :
+                result = create_new_object();
+                temp = pop(mainstack);
+                temp1 = pop(mainstack);
+                if(temp1->type == 'i' && temp->type == 'i') {
+                    result->type = 'i';
+                    result->value = (temp1->value) / (temp->value); }
+                if(temp1->type == 'i' && temp->type == 'f' ) {
+                    result->type = 'i';
+                    result->value = ((temp1->value) / (int)(temp->fl)); }
+                if(temp1->type == 'f' && temp->type == 'i') {
+                    result->type = 'i';
+                    result->value = ((int)(temp1->fl) / (temp->value)); }
+                if(temp1->type == 'f' && temp->type == 'f') {
+                    result->type = 'i';
+                    result->value = ((int)(temp1->fl) / (int)(temp->fl)); }
+                push(mainstack, result);
+                break;
+
+
+
+            case BINARY_SUBTRACT :
+                result = create_new_object();
+                temp = pop(mainstack);
+                temp1 = pop(mainstack);
+                if(temp1->type == 'i' && temp->type == 'i') {
+                    result->type = 'i';
+                    result->value = (temp1->value) - (temp->value); }
+                if(temp1->type == 'i' && temp->type == 'f') {
+                    result->type = 'f';
+                    result->fl = (temp1->value) - (temp->fl); }
+                if(temp1->type == 'f' && temp->type == 'i') {
+                    result->type = 'f';
+                    result->fl = (temp1->fl) - (temp->value); }
+                if(temp1->type == 'f' && temp->type == 'f') {
+                    result->type = 'f';
+                    result->fl = (temp1->fl) - (temp->fl); }
+                push(mainstack, result);
+                break;
+
+            
+            case INPLACE_ADD :
+                temp = pop(mainstack);
+                temp1 = pop(mainstack);
+                if(temp1->type == 'i' && temp->type == 'i') {
+                    temp1->value = temp1->value + temp->value; }
+                if(temp1->type == 'i' && temp->type == 'f') {
+                    temp1->type = 'f';
+                    temp1->fl = (float)(temp1->value) + temp->fl; } 
+                if(temp1->type == 'f' && temp->type == 'i') {
+                    temp1->fl = temp1->fl + (float)(temp->value); }
+                if(temp1->type == 'f' && temp->type == 'f') {
+                    temp1->fl = temp1->fl + temp1->fl; }
+                if(temp1->type == 't' && temp->type == 't') {
+                    temp1->string = strcat(temp1->string, temp->string); }
+                push(mainstack, temp1);
+                break;
+
+            case INPLACE_SUBTRACT :
+                temp = pop(mainstack);
+                temp1 = pop(mainstack);
+                if(temp1->type == 'i' && temp->type == 'i') {
+                    temp1->value = temp1->value + temp->value; }
+                if(temp1->type == 'i' && temp->type == 'f') {
+                    temp1->type = 'f';
+                    temp1->fl = (float)(temp1->value) + temp->fl; }
+                if(temp1->type == 'f' && temp->type == 'i') {
+                    temp1->type = 'f';
+                    temp1->fl = temp1->fl + (float)(temp->value); }
+                if(temp1->type == 'f' && temp->type == 'f') {
+                    temp1->fl = temp1->fl + temp->fl; }
+                push(mainstack, temp1);
+                break;
+
+
+
+
         }
     }
     
@@ -211,8 +435,8 @@ int main(int argc, char **argv)
     free(names);
     free(filename);
     free(name);
-    free(execstack);
-    free(localstack);
+    free(mainstack);
+
     return 0;
 }
 
@@ -253,40 +477,96 @@ char r_byte(FILE *p)
 }
 
 
-void pushmain(void *data, int* top, void **execstack, int* stacksize) 
+
+
+
+ void push(STACK * u, pyobject *item)
 {
-    if((*top) < (*stacksize)) {
-        execstack[(*top)++] =  data;
+    if(u->top < u->size) {
+        u->stack[(u->top)++] = item; 
     } else {
-        printf("error: stack full , can't push\n");
+       /* printf("error: stack full, can't push\n") */;
     }
 }
- 
-void *popmain(void **execstack, int *top)
+pyobject* pop(STACK * u) 
 {
-    if((*top) > 0) {
-        return execstack[--(*top)];
+    if(u->top > 0) {
+        return u->stack[--(u->top)];
     } else {
-        printf("error: stack empty\n");
-    }
-}
- 
-void pushlocal(void *data, int *topl, void **localstack, int *namesize)
-{
-    if((*topl) < (*namesize)) {
-        localstack[(*topl)++] = data;
-    } else {
-        printf("error: stackl full, can't store\n");
+        /* printf("error: stack empty\n") */;
     }
 }
 
-void *poplocal(void **localstack, int *topl)
+STACK * create_new_datastack(int size)
 {
-    if((*topl) > 0) {
-        return localstack[--(*topl)];
-    } else {
-        printf("error: stackl empty\n");
+    int i;
+    STACK *new = (STACK *) malloc (sizeof(STACK));
+    new->top = 0;
+    new->size = size;
+    new->stack = (pyobject **) malloc(size * sizeof(pyobject*));
+    for(i = 0; i < size; i++) { 
+        if((new->stack[i] = (pyobject *) malloc (sizeof(pyobject))) == NULL){
+            printf("error: stack alloc @ 297\n");}
     }
+    return new;
 }
 
-    
+
+STACK * create_new_stack(int size)
+{
+    STACK * new = (STACK *) malloc(sizeof(STACK));
+    new->top = 0;
+    new->size = size;
+    new->stack = (pyobject **) malloc(size * sizeof(pyobject*));
+    return new;
+}
+
+
+pyobject * create_new_object()
+{
+    pyobject *new;
+    new = malloc(sizeof(pyobject));
+    return new;
+}
+/*
+double binarypower(double x, double y)
+{
+    return pow(x, y);
+}
+ */
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
