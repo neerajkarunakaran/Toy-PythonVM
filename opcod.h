@@ -85,11 +85,11 @@
 #define  BUILD_LIST     103
 #define  BUILD_MAP      104
 #define  LOAD_ATTR      105
-#define  COMPARE_OP     106
-#define  IMPORT_NAME    107
+#define  COMPARE_OP     107
+#define  IMPORT_NAME    106
 #define  IMPORT_FROM    108
 #define  JUMP_FORWARD   110
-#define  JUMP_IF_FALSE  111
+#define  JUMP_IF_FALSE  114
 #define  JUMP_IF_TRUE   112
 #define  JUMP_ABSOLUTE  113
 #define  LOAD_GLOBAL    116

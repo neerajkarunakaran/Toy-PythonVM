@@ -9,7 +9,7 @@
 typedef struct pyobject_t{
     int type; 
     bool  boolvalue;
-
+    void *data;
     int value;
     char *string;
     void *ptr;
@@ -37,6 +37,7 @@ void push(STACK * u, pyobject *item);
 pyobject*  pop(STACK * u);
 STACK * create_new_stack(int size);
 pyobject * create_new_object();
+pyobject * create_new_list(STACK *mainstack, int size);
 int main(int argc, char **argv)
 {
     FILE *fp;
@@ -104,7 +105,7 @@ int main(int argc, char **argv)
     c = r_bytes(codesize, fp); 
 
 
-      
+
 
 
 
@@ -322,33 +323,42 @@ int main(int argc, char **argv)
             case NOP :
                 break;
             case LOAD_CONST :  
-                type = c[i];  
+                type = c[i]; 
                 push(mainstack, consts->stack[type]); i = i + 2;
                // r_byte(fp);  
                 break;
             case STORE_NAME :
-                type = c[i];
+                type = c[i]; 
                 names->stack[type]->ptr = (void*)pop(mainstack);
-
+                
                 
 
                 i = i + 2;
                 break;
             case LOAD_NAME :
                 type = c[i];
-                push(mainstack, (pyobject *)(names->stack[type]->ptr));
+                push(mainstack, (pyobject *)(names->stack[type]->ptr)); 
                 i = i + 2;
                 break;
 
             case STORE_FAST :
+
                 type = c[i];
-                varname->stack[type]->ptr = (void*) pop(mainstack);
+                
+                varname->stack[type]->ptr = (void *) pop(mainstack);
+    
+
                 i = i + 2;
+                break;
                 
             case LOAD_FAST :
                 type = c[i];
+
                 push(mainstack, (pyobject *)(varname->stack[type]->ptr));
+
+
                 i = i + 2;
+                break;
             case BINARY_ADD :
                 result = create_new_object();
                 temp = pop(mainstack);
@@ -363,7 +373,7 @@ int main(int argc, char **argv)
                 break;
             case PRINT_ITEM :
                 
-                result = pop(mainstack);
+                result = pop(mainstack);  
                 if(result->type == 'i') {
                     printf("%d", result->value); }
                 if(result->type == 't' || type == 's') {
@@ -376,6 +386,26 @@ int main(int argc, char **argv)
                     } else {
                         printf("false"); }
                 }
+                if(result->type == '[') { 
+                    temp = result;
+                    printf("[");
+                    while(result != NULL) {
+                        temp =(pyobject *)(result->data);
+                      
+                        if(temp->type == 'i') {
+                            printf("%d ", temp->value); }
+                        if(temp->type == 'f') {
+                            printf("%f ", temp->fl); }
+                        if(temp->type == 't' || temp->type == 's') {
+                            printf("%s ", temp->string); }
+                   
+                       
+                        result = (pyobject *)(result->ptr);
+                    }  
+                    printf("]\n");
+                }  
+                            
+                    
                 break;
 
     
@@ -784,14 +814,25 @@ int main(int argc, char **argv)
                 push(mainstack, result);
                 break;
                     
-
-        
-
-
-                                                 
+            case BUILD_LIST :
+                type = c[i]; 
+                result = create_new_list(mainstack, type);
+                push(mainstack, result);
+                break;
+            case JUMP_IF_FALSE :
+                type = c[i];
+                result = pop(mainstack);
+                if(result->type == 'b') {
+                    if(result->boolvalue ==  false) {
+                        i = type;
+                    } else {
+                        i = i + 2;
+                    }
+                }
+                break;                                      
             default:   
                   
-                    break;
+                break;
 
 
 
@@ -874,7 +915,7 @@ char r_byte(FILE *p)
 pyobject* pop(STACK * u) 
 {
     if(u->top > 0) {
-        return u->stack[--(u->top)];
+        return u->stack[--(u->top)];  
     } else {
         printf("error: stack empty\n");
     }
@@ -926,14 +967,33 @@ double binarypower(double x, double y)
     return ptr;
 }
 */
-/*
-pyobject * create_new_list(mainstack, int size)
+
+pyobject * create_new_list(STACK *mainstack, int size)
 {
     int i;
-    pyobject *new, *temp;
-    temp = pop(mainstack);
-    new = temp;    
-    for(i = 1; i < size; i++) {
-        temp->ptr = 
+    pyobject  *current, *head;
+    head = NULL;
+    current = NULL;
+    for(i = 0; i < size; i++) {
+        if(head == NULL) {
+            head = create_new_object();
+            head->type = '[';
+            head->data = (void *)pop(mainstack);
+            head->ptr = NULL; 
+        } else {
+            current = create_new_object(); 
+            current->type = '[';
+            current->data = (void *)pop(mainstack);
+            current->ptr = (void*)head;
+            head = current;
+        }
+    } 
+    return  head;
+}   
+    
+
+
+
+
         
-  */  
+
