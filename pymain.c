@@ -24,29 +24,46 @@ typedef struct STACK_t{
     pyobject **stack;
 }STACK; 
 
+typedef struct codeobject_t {
+    int argcount;
+    int nlocals;
+    int stacksize;
+    int codesize;
+    int constsize;
+    int namesize;
+    int varnamesize;
+    int freevarsize;
+    int cellvarsize;
+    int firstlineno;
+    char *filename;
+    char *functionname;
+    char *code;
+    STACK *co_const;
+    
+    STACK *co_names;
+    STACK *co_varname;
+    STACK *co_freevar;
+    STACK *co_cellvar;
+ } CODEOBJECT;
 
-
-
-
-
+CODEOBJECT *codeobj;
+STACK *mainstack;
+void call_execute(char *code);
+void read_file(FILE *fp);
  //static int * create_new_bytecode(int codesize);
 /*
 double binarypower(double x, double y);  */
 STACK * create_new_datastack(int size);
-void push(STACK * u, pyobject *item);
-pyobject*  pop(STACK * u);
+void push(pyobject *item);
+pyobject*  pop(void);
 STACK * create_new_stack(int size);
 pyobject * create_new_object();
-pyobject * create_new_list(STACK *mainstack, int size);
+pyobject * create_new_list(int size);
 int main(int argc, char **argv)
 {
-    FILE *fp;
-    static int type, i, stacksize, codesize, constsize, namesize, varnamesize, freevarsize, cellvarsize,  \
-               argcount, nlocals, filenamesize, mnamesize, firstlineno, top, topl;
 
 
-
-    STACK  * consts, *names, *varname, *freevar, *cellvar;
+    FILE *fp;          
 
 
 
@@ -66,9 +83,13 @@ int main(int argc, char **argv)
 
 
 
-    char *c;
-    char  *filename, *name, bytes;
-    int stringsize;
+
+
+
+
+    
+
+
 
 
 
@@ -80,14 +101,44 @@ int main(int argc, char **argv)
     fp = fopen(argv[1], "rb");
     if(fp == NULL) { 
         printf("can't open file %s\n", argv[1]); 
-        exit(1); }
+        exit(1); }  
+
+
+    codeobj = (CODEOBJECT *) malloc(sizeof(CODEOBJECT)); 
+
+    read_file(fp);
+    fclose(fp);
+    printf("Executing %s............................................................\n", codeobj[0].filename);
+
+
     
+    if((mainstack = create_new_stack(codeobj[0].stacksize)) == NULL) {
+        printf("stack alloc error @ 153\n"); }
+   
+    call_execute(codeobj[0].code);
+
+    free(codeobj);
+    free(mainstack);
+    return 0;
+}
+
+
+void read_file(FILE *fp)
+{
+
+    static int type, stringsize, i;
+
+    
+
     while((type = r_byte(fp)) != 'c') {
         ;
-    } 
-    argcount = (int) r_value(4, fp);  printf("argcount = %d\n", argcount);
-    nlocals = (int) r_value(4, fp);  printf("nlocals = %d\n", nlocals);
-    stacksize = (int) r_value(4, fp);  printf("stacksize =  %d\n", stacksize); 
+    }
+
+  
+
+    codeobj[0].argcount = (int) r_value(4, fp);  printf("argcount = %d\n", codeobj[0].argcount);
+    codeobj[0].nlocals = (int) r_value(4, fp);  printf("nlocals = %d\n", codeobj[0].nlocals);
+    codeobj[0].stacksize = (int) r_value(4, fp);  printf("stacksize =  %d\n", codeobj[0].stacksize); 
 
 
 
@@ -95,14 +146,14 @@ int main(int argc, char **argv)
         ;
     } 
 
-    codesize = (int) r_value(4, fp); 
+    codeobj[0].codesize = (int) r_value(4, fp);  
     
 
 
 
 
 
-    c = r_bytes(codesize, fp); 
+    codeobj[0].code = r_bytes(codeobj[0].codesize, fp); 
 
 
 
@@ -111,50 +162,50 @@ int main(int argc, char **argv)
 
 
 
-  fseek(fp, 0, SEEK_SET);
-    while((type = r_byte(fp)) != 'S') {
-        ;
-    }
 
-    type = r_byte(fp); 
-    constsize = r_value(4, fp); 
-    if((consts = create_new_datastack(constsize)) == NULL) {
+
+
+
+
+    type = r_byte(fp);
+    codeobj[0].constsize = r_value(4, fp); 
+    if((codeobj[0].co_const = create_new_datastack(codeobj[0].constsize)) == NULL) {
         printf("error: stack alloc @ 90\n"); }
 
-    if(consts == NULL) {
+    if(codeobj[0].co_const == NULL) {
         perror("consts alloc error");
         exit(1);
     }   
 
 
-    for(i = 0; i < constsize; i++) {
+    for(i = 0; i < codeobj[0].constsize; i++) {
         type = r_byte(fp);
         if(type == 'i') {
 
-       consts->stack[i]->type = 'i';
-       consts->stack[i]->value = r_value(4, fp);           
+       codeobj[0].co_const->stack[i]->type = 'i';
+       codeobj[0].co_const->stack[i]->value = r_value(4, fp);           
             
         } 
         if(type == 'N') {
 
-           consts->stack[i]->type = 'N';
-         consts->stack[i]->value = 0;
+            codeobj[0].co_const->stack[i]->type = 'N';
+            codeobj[0].co_const->stack[i]->value = 0;
             
         }
         if(type == 't' || type == 's') {
             stringsize = (int) r_value(4, fp);
-            consts->stack[i]->type = 't';
-            consts->stack[i]->string = r_bytes(stringsize, fp);
+            codeobj[0].co_const->stack[i]->type = 't';
+            codeobj[0].co_const->stack[i]->string = r_bytes(stringsize, fp);
         }
     } 
 
     printf("consts (");
-    if(constsize){
-         for(i = 0; i < constsize; i++ ){
-             if(consts->stack[i]->type == 'i') { printf("%d ", consts->stack[i]->value); }
-             if(consts->stack[i]->type == 't') { printf("%s ", consts->stack[i]->string); }
-             if(consts->stack[i]->type == 'f') { printf("%f ", consts->stack[i]->fl); }
-             if(consts->stack[i]->type == 'N') { printf("%d ", consts->stack[i]->value); }
+    if(codeobj[0].constsize){
+         for(i = 0; i < codeobj[0].constsize; i++ ){
+             if(codeobj[0].co_const->stack[i]->type == 'i') { printf("%d ", codeobj[0].co_const->stack[i]->value); }
+             if(codeobj[0].co_const->stack[i]->type == 't') { printf("%s ", codeobj[0].co_const->stack[i]->string); }
+             if(codeobj[0].co_const->stack[i]->type == 'f') { printf("%f ", codeobj[0].co_const->stack[i]->fl); }
+             if(codeobj[0].co_const->stack[i]->type == 'N') { printf("%d ", codeobj[0].co_const->stack[i]->value); }
          }  
     } else {
         printf(" ");
@@ -162,31 +213,31 @@ int main(int argc, char **argv)
     type = r_byte(fp); 
     if(type == '(') {
  
-    namesize = (int) r_value(4, fp);
+    codeobj[0].namesize = (int) r_value(4, fp);
 
-    if((names = create_new_datastack(namesize)) == NULL) {printf(" alloc error @163\n");} 
+    if((codeobj[0].co_names = create_new_datastack(codeobj[0].namesize)) == NULL) {printf(" alloc error @163\n");} 
     }
 
 
-    for(i = 0; i < namesize; i++) {
+    for(i = 0; i < codeobj[0].namesize; i++) {
         type = r_byte(fp);
         if(type == 't'){ 
             stringsize = (int) r_value(4, fp);
-            names->stack[i]->type = 't';
-            names->stack[i]->string = r_bytes(stringsize, fp); }
+            codeobj[0].co_names->stack[i]->type = 't';
+            codeobj[0].co_names->stack[i]->string = r_bytes(stringsize, fp); }
         if(type == 'i') {
-            names->stack[i]->type = 'i';    
-            names->stack[i]->value = (int) r_value(4, fp); }
+            codeobj[0].co_names->stack[i]->type = 'i';    
+            codeobj[0].co_names->stack[i]->value = (int) r_value(4, fp); }
 
     }
     printf("names(");
-    if(namesize) { 
-        for(i = 0; i < namesize; i++) {
-            type = names->stack[i]->type;
+    if(codeobj[0].namesize) { 
+        for(i = 0; i < codeobj[0].namesize; i++) {
+            type = codeobj[0].co_names->stack[i]->type;
             if(type == 't') { 
-                printf("%s ", names->stack[i]->string);}
+                printf("%s ", codeobj[0].co_names->stack[i]->string);}
             if(type == 'i') {
-                printf("%d ", names->stack[i]->value); }
+                printf("%d ", codeobj[0].co_names->stack[i]->value); }
         }
     } else {
         printf(" ");
@@ -194,108 +245,108 @@ int main(int argc, char **argv)
 
        
     r_byte(fp);
-    varnamesize = (int) r_value(4, fp);
-    if(varnamesize) {
-        varname = create_new_datastack(varnamesize); 
-        for(i = 0; i < varnamesize; i++) {
+    codeobj[0].varnamesize = (int) r_value(4, fp);
+    if(codeobj[0].varnamesize) {
+        codeobj[0].co_varname = create_new_datastack(codeobj[0].varnamesize); 
+        for(i = 0; i < codeobj[0].varnamesize; i++) {
             type = r_byte(fp);
             if(type == 'i') {
-                varname->stack[i]->type = 'i';
-                varname->stack[i]->value = (int)r_value(4, fp); }
+                codeobj[0].co_varname->stack[i]->type = 'i';
+                codeobj[0].co_varname->stack[i]->value = (int)r_value(4, fp); }
             if(type == 't') {
-                varname->stack[i]->type = 't';
+                codeobj[0].co_varname->stack[i]->type = 't';
                 stringsize = (int) r_value(4, fp);
-                varname->stack[i]->string = r_bytes(stringsize, fp); }
+                codeobj[0].co_varname->stack[i]->string = r_bytes(stringsize, fp); }
         }
     }
     printf("varname (");
-    if(varnamesize) {
-        for(i = 0; i < varnamesize; i++) {
-            type = varname->stack[i]->type;
+    if(codeobj[0].varnamesize) {
+        for(i = 0; i < codeobj[0].varnamesize; i++) {
+            type = codeobj[0].co_varname->stack[i]->type;
             if(type == 'i') {
-                printf("%d ", varname->stack[i]->value); }
+                printf("%d ", codeobj[0].co_varname->stack[i]->value); }
             if(type == 't') {
-                printf("%s ", varname->stack[i]->string);} 
+                printf("%s ", codeobj[0].co_varname->stack[i]->string);} 
         }
     } else {
         printf(" ");
     } printf(")\n");
 
     r_byte(fp);
-    freevarsize = (int) r_value(4, fp); 
+    codeobj[0].freevarsize = (int) r_value(4, fp); 
 
-    if(freevarsize){
-        freevar = create_new_datastack(freevarsize);
-        for(i = 0; i < freevarsize; i++) {
+    if(codeobj[0].freevarsize){
+        codeobj[0].co_freevar = create_new_datastack(codeobj[0].freevarsize);
+        for(i = 0; i < codeobj[0].freevarsize; i++) {
             type = r_byte(fp);
             if(type == 'i') {
-                freevar->stack[i]->type = 'i';
-                freevar->stack[i]->value = (int) r_value(4, fp); }
+                codeobj[0].co_freevar->stack[i]->type = 'i';
+                codeobj[0].co_freevar->stack[i]->value = (int) r_value(4, fp); }
             if(type == 't') {
                 stringsize = (int) r_value(4, fp);
-                freevar->stack[i]->type = 't';
-                freevar->stack[i]->string = r_bytes(stringsize, fp); }
+                codeobj[0].co_freevar->stack[i]->type = 't';
+                codeobj[0].co_freevar->stack[i]->string = r_bytes(stringsize, fp); }
         }
     } printf("freevar (");
-    if(freevarsize) {
-        for(i = 0; i < freevarsize; i++) {
-            type = freevar->stack[i]->type;
+    if(codeobj[0].freevarsize) {
+        for(i = 0; i < codeobj[0].freevarsize; i++) {
+            type = codeobj[0].co_freevar->stack[i]->type;
             if(type == 'i') {
-                printf("%d ", freevar->stack[i]->value); }
+                printf("%d ", codeobj[0].co_freevar->stack[i]->value); }
             if(type == 't') {
-                printf("%s ", freevar->stack[i]->string); }
+                printf("%s ", codeobj[0].co_freevar->stack[i]->string); }
         }
     } else {
         printf(" ");
     } printf(")\n");
     r_byte(fp);        
-    cellvarsize = (int) r_value(4, fp);
-    if(cellvarsize) {
-        cellvar = create_new_datastack(cellvarsize);
-        for(i = 0; i < cellvarsize; i++) {
+    codeobj[0].cellvarsize = (int) r_value(4, fp);
+    if(codeobj[0].cellvarsize) {
+        codeobj[0].co_cellvar = create_new_datastack(codeobj[0].cellvarsize);
+        for(i = 0; i < codeobj[0].cellvarsize; i++) {
             type = r_byte(fp);
             if(type == 'i') {
-                cellvar->stack[i]->type = 'i';
-                cellvar->stack[i]->value = (int) r_value(4, fp); }
+                codeobj[0].co_cellvar->stack[i]->type = 'i';
+                codeobj[0].co_cellvar->stack[i]->value = (int) r_value(4, fp); }
             if(type == 't') {
-                cellvar->stack[i]->type == 't';
+                codeobj[0].co_cellvar->stack[i]->type == 't';
                 stringsize = (int) r_value(4, fp);
-                cellvar->stack[i]->string = r_bytes(stringsize, fp); }
+                codeobj[0].co_cellvar->stack[i]->string = r_bytes(stringsize, fp); }
         }
     } printf("cellvar (");
-    if(cellvarsize) {
-        for(i = 0; i < cellvarsize; i++) {
-            type = cellvar->stack[i]->type;
+    if(codeobj[0].cellvarsize) {
+        for(i = 0; i < codeobj[0].cellvarsize; i++) {
+            type = codeobj[0].co_cellvar->stack[i]->type;
             if(type == 'i') {
-                printf("%d ", cellvar->stack[i]->value); }
+                printf("%d ", codeobj[0].co_cellvar->stack[i]->value); }
             if(type == 't') {
-                printf("%s ", cellvar->stack[i]->string); }
+                printf("%s ", codeobj[0].co_cellvar->stack[i]->string); }
         }
     } else {
         printf(" ");
     } printf(")\n");
 
     if((type = r_byte(fp)) == 's') {
-        filenamesize = (int) r_value(4, fp);
-        filename = (char *) malloc(filenamesize * sizeof(char));
-        filename = r_bytes(filenamesize, fp);  printf("filename: %s\n", filename);
+        stringsize = (int) r_value(4, fp);
+       
+        codeobj[0].filename = r_bytes(stringsize, fp);  printf("filename: %s\n", codeobj[0].filename);
     }
 
 
     if((type = r_byte(fp)) == 't') {
-        mnamesize = (int) r_value(4, fp);
-        name = (char *) malloc(mnamesize * sizeof(char));
-        name = r_bytes(mnamesize, fp);  printf("name : %s\n", name);
+        stringsize = (int) r_value(4, fp);
+        
+        codeobj[0].functionname = r_bytes(stringsize, fp);  printf("name : %s\n", codeobj[0].functionname);
     }
 
-    firstlineno = (int) r_value(4, fp); printf("firstlineno : %d\n", firstlineno);
+    codeobj[0].firstlineno = (int) r_value(4, fp); printf("firstlineno : %d\n", codeobj[0].firstlineno);
     
     
-    printf("Executing %s............................................................\n", filename);
 
-    STACK *mainstack;  
-    if((mainstack = create_new_stack(stacksize)) == NULL) {
-        printf("stack alloc error @ 153\n"); }  
+
+
+
+}
 
 
 
@@ -312,68 +363,70 @@ int main(int argc, char **argv)
 
 
 
-
-
+void call_execute(char *code)
+{
 
     pyobject *temp, *temp1, *temp2, *result;
-    i = 0;
-    while(i < codesize) {
-        type = c[i++];  
+    int i, pcount, type, codecount, stringsize;
+    pcount = 0;
+    codecount = 0;
+    while(pcount < codeobj[0].codesize) {
+        type = codeobj[0].code[pcount++];  
         switch(type) {
             case NOP :
                 break;
             case LOAD_CONST :  
-                type = c[i]; 
-                push(mainstack, consts->stack[type]); i = i + 2;
+                type = codeobj[0].code[pcount]; 
+                push(codeobj[0].co_const->stack[type]); pcount = pcount + 2;
                // r_byte(fp);  
                 break;
             case STORE_NAME :
-                type = c[i]; 
-                names->stack[type]->ptr = (void*)pop(mainstack);
+                type = codeobj[0].code[pcount]; 
+                codeobj[0].co_names->stack[type]->ptr = (void*)pop();
                 
                 
 
-                i = i + 2;
+                pcount = pcount + 2;
                 break;
             case LOAD_NAME :
-                type = c[i];
-                push(mainstack, (pyobject *)(names->stack[type]->ptr)); 
-                i = i + 2;
+                type = codeobj[0].code[pcount];
+                push((pyobject *)(codeobj[0].co_names->stack[type]->ptr)); 
+                pcount = pcount + 2;
                 break;
 
             case STORE_FAST :
 
-                type = c[i];
+                type = codeobj[0].code[pcount];
                 
-                varname->stack[type]->ptr = (void *) pop(mainstack);
+                codeobj[0].co_varname->stack[type]->ptr = (void *) pop();
     
 
-                i = i + 2;
+                pcount = pcount + 2;
                 break;
                 
             case LOAD_FAST :
-                type = c[i];
+                type = codeobj[0].code[pcount];
 
-                push(mainstack, (pyobject *)(varname->stack[type]->ptr));
+                push((pyobject *)(codeobj[0].co_varname->stack[type]->ptr));
 
 
-                i = i + 2;
+                pcount = pcount + 2;
                 break;
             case BINARY_ADD :
                 result = create_new_object();
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp->type == 'i' && temp1->type == 'i') {
                     result->value = add(temp->value, temp1->value);
                     result->type = 'i'; }
                 if(temp->type == 't' && temp1->type == 't') {
                     result->string = strcat(temp1->string, temp->string);
                     result->type = 't'; }
-                push(mainstack, result);
+                push(result);
                 break;
             case PRINT_ITEM :
                 
-                result = pop(mainstack);  
+                result = pop();  
                 if(result->type == 'i') {
                     printf("%d", result->value); }
                 if(result->type == 't' || type == 's') {
@@ -413,57 +466,57 @@ int main(int argc, char **argv)
                 printf("\n");
                 break;
  /*           case RETURN_VALUE :
-                return pop(mainstack);
+                return pop();
                 break;
 */
             case DELETE_NAME :
-                type = c[i];
-                if((names->stack[type]->ref) == 0) {
-                    free(names->stack[type]); 
+                type = codeobj[0].code[pcount];
+                if((codeobj[0].co_names->stack[type]->ref) == 0) {
+                    free(codeobj[0].co_names->stack[type]); 
                 } else {
-                    --(names->stack[type]->ref); }
-                i = i + 2;
+                    --(codeobj[0].co_names->stack[type]->ref); }
+                pcount = pcount + 2;
                 break;
             case STORE_GLOBAL :
-                type = c[i];
-                names->stack[type]->ptr = (void*) pop(mainstack);
-                i = i + 2;
+                type = codeobj[0].code[pcount];
+                codeobj[0].co_names->stack[type]->ptr = (void*) pop();
+                pcount = pcount + 2;
                 break;
             case LOAD_GLOBAL :
-                type = c[i];
-                push(mainstack, (pyobject *)(names->stack[type]->ptr));
-                i = i + 2;
+                type = codeobj[0].code[pcount];
+                push((pyobject *)(codeobj[0].co_names->stack[type]->ptr));
+                pcount = pcount + 2;
                 break;
             case ROT_TWO :
      
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
-                push(mainstack, temp);
-                push(mainstack, temp1);
+                temp = pop();
+                temp1 = pop();
+                push(temp);
+                push(temp1);
                 break;
             case ROT_THREE :
                
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
-                temp2 = pop(mainstack);
-                push(mainstack, temp);
-                push(mainstack, temp1);
-                push(mainstack, temp2);
+                temp = pop();
+                temp1 = pop();
+                temp2 = pop();
+                push(temp);
+                push(temp1);
+                push(temp2);
                 break;
          /*   case BINARY_POWER :
            
                 result = create_new_object();
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 result->value = (int)binarypower((double)temp1->value, (double)temp->value);
                 result->type = 'i';
-                push(mainstack, result);
+                push(result);
                 break;  */
             case BINARY_MULTIPLY :
     
                 result = create_new_object();
-                temp  = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp  = pop();
+                temp1 = pop();
                 
                 if(temp->type == 'i' && temp1->type == 'i') {
 
@@ -491,14 +544,14 @@ int main(int argc, char **argv)
                     for(i = 0; i < (temp->value); i++) {
                         strcat(result->string, temp1->string); }
                     result->type = 't'; }
-                push(mainstack, result);
+                push(result);
                 break;
 
             case BINARY_DEVIDE :
 
                 result = create_new_object();
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     result->type = 'i';
                     result->value = (temp1->value) / (temp->value); }
@@ -511,22 +564,22 @@ int main(int argc, char **argv)
                 if(temp1->type == 'f' && temp->type == 'f') {
                     result->type = 'f';
                     result->fl = (temp1->fl) / (temp->fl); }
-                push(mainstack, result);
+                push(result);
                 break;
             
             case BINARY_MODULO :
                 result = create_new_object();
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     result->type = 'i';
                     result->value = (temp1->value) % (temp->value); }
-                push(mainstack, result);
+                push(result);
                 break;
             case BINARY_FLOOR_DEVIDE :
                 result = create_new_object();
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     result->type = 'i';
                     result->value = (temp1->value) / (temp->value); }
@@ -539,15 +592,15 @@ int main(int argc, char **argv)
                 if(temp1->type == 'f' && temp->type == 'f') {
                     result->type = 'i';
                     result->value = ((int)(temp1->fl) / (int)(temp->fl)); }
-                push(mainstack, result);
+                push(result);
                 break;
 
 
 
             case BINARY_SUBTRACT :
                 result = create_new_object();
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     result->type = 'i';
                     result->value = (temp1->value) - (temp->value); }
@@ -560,13 +613,13 @@ int main(int argc, char **argv)
                 if(temp1->type == 'f' && temp->type == 'f') {
                     result->type = 'f';
                     result->fl = (temp1->fl) - (temp->fl); }
-                push(mainstack, result);
+                push(result);
                 break;
 
             
             case INPLACE_ADD :
-                temp = pop(mainstack); 
-                temp1 = pop(mainstack);
+                temp = pop(); 
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     temp1->value = temp1->value + temp->value; }
                 if(temp1->type == 'i' && temp->type == 'f') {
@@ -578,12 +631,12 @@ int main(int argc, char **argv)
                     temp1->fl = temp1->fl + temp1->fl; }
                 if(temp1->type == 't' && temp->type == 't') {
                     temp1->string = strcat(temp1->string, temp->string); }
-                push(mainstack, temp1);
+                push(temp1);
                 break;
 
             case INPLACE_SUBTRACT :
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     temp1->value = temp1->value + temp->value; }
                 if(temp1->type == 'i' && temp->type == 'f') {
@@ -594,12 +647,12 @@ int main(int argc, char **argv)
                     temp1->fl = temp1->fl + (float)(temp->value); }
                 if(temp1->type == 'f' && temp->type == 'f') {
                     temp1->fl = temp1->fl + temp->fl; }
-                push(mainstack, temp1);
+                push(temp1);
                 break;
 
             case INPLACE_MULTIPLY :
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     temp1->type = 'i';
                     temp1->value = temp1->value * temp->value; }
@@ -611,11 +664,11 @@ int main(int argc, char **argv)
                     temp1->fl = temp1->fl * (float)(temp->value); }
                 if(temp1->type == 'f' && temp->type == 'f') {
                     temp1->fl = temp1->fl * temp->fl; }
-                push(mainstack, temp1);
+                push(temp1);
                 break;
             case INPLACE_DEVIDE :
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     temp1->value = temp1->value / temp->value; }
                 if(temp1->type == 'i' && temp->type == 'f') {
@@ -626,102 +679,102 @@ int main(int argc, char **argv)
                     temp1->fl = temp1->fl / (float)(temp->value); }
                 if(temp1->type == 'f' && temp->type == 'f') {
                     temp1->fl = temp1->fl / temp->fl; }
-                push(mainstack, temp1);
+                push(temp1);
                 break;
 
             case INPLACE_MODULO :
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     temp1->value = temp1->value % temp->value; }
-                push(mainstack, temp1);
+                push(temp1);
                 break;     
             case BINARY_LSHIFT :
                 result = create_new_object();
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     result->type = 'i';
                     result->value = temp1->value << temp->value;}
-                push(mainstack, result);
+                push(result);
                 break;
             case BINARY_RSHIFT :
                 result = create_new_object();
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     result->type = 'i';
                     result->value = temp1->value >> temp->value; }
-                push(mainstack, result);
+                push(result);
                 break;
             case BINARY_AND :
                 result = create_new_object();
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     result->type = 'i';
                     result->value = temp1->value & temp->value; }
-                push(mainstack, result);
+                push(result);
                 break;
             case BINARY_XOR :
                 result = create_new_object();
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     result->type = 'i';
                     result->value = temp1->value ^ temp->value; }
-                push(mainstack, result);
+                push(result);
                 break;
             case BINARY_OR :
                 result = create_new_object();
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     result->type = 'i';
                     result->value = temp1->value | temp->value; }
-                push(mainstack, result);
+                push(result);
                 break;
             case INPLACE_RSHIFT :
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     temp1->value = temp1->value >> temp->value; }
-                push(mainstack, temp1);
+                push(temp1);
                 break;
             case INPLACE_LSHIFT :
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     temp1->value = temp1->value << temp->value; }
-                push(mainstack, temp1);
+                push(temp1);
                 break;
             case INPLACE_AND :
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     temp1->value = temp1->value & temp->value; }
-                push(mainstack, temp1);
+                push(temp1);
                 break;
             case INPLACE_OR :
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
                     temp1->value = temp1->value | temp->value; }
-                push(mainstack, temp1);
+                push(temp1);
                 break;
             case INPLACE_XOR :
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(temp1->type == 'i'  && temp->type == 'i'){
                     temp1->value = temp1->value ^ temp->value; }
-                push(mainstack, temp1);
+                push(temp1);
                 break;  
             case COMPARE_OP :
-                type = c[i];
+                type = codeobj[0].code[pcount];
                 result = create_new_object();
                 result->type = 'b';
-                temp = pop(mainstack);
-                temp1 = pop(mainstack);
+                temp = pop();
+                temp1 = pop();
                 if(type == 0) {
                     if(temp->type == 'i'){
                         if(temp1->value < temp->value){
@@ -810,23 +863,23 @@ int main(int argc, char **argv)
                             result->boolvalue = false;} 
                     }
                 }        
-                i = i + 2;
-                push(mainstack, result);
+                pcount = pcount + 2;
+                push(result);
                 break;
                     
             case BUILD_LIST :
-                type = c[i]; 
-                result = create_new_list(mainstack, type);
-                push(mainstack, result);
+                type = codeobj[0].code[pcount]; 
+                result = create_new_list(type);
+                push(result);
                 break;
             case JUMP_IF_FALSE :
-                type = c[i];
-                result = pop(mainstack);
+                type = codeobj[0].code[pcount];
+                result = pop();
                 if(result->type == 'b') {
                     if(result->boolvalue ==  false) {
-                        i = type;
+                        pcount = type;
                     } else {
-                        i = i + 2;
+                        pcount = pcount + 2;
                     }
                 }
                 break;                                      
@@ -852,17 +905,17 @@ int main(int argc, char **argv)
     }
     
 
-
-
-
-    free(consts);
-    free(names);
-    free(filename);
-    free(name);
-    free(mainstack);
-
-    return 0;
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -888,7 +941,7 @@ int main(int argc, char **argv)
 
 static  char * r_bytes(int n, FILE *p){
     static char * b;
-    b = (char *) malloc (n);
+    b = (char *) malloc (n * sizeof(char));
     fread(b, 1, n, p);
     return b;
 }
@@ -904,18 +957,18 @@ char r_byte(FILE *p)
 
 
 
- void push(STACK * u, pyobject *item)
+ void push(pyobject *item)
 {
-    if(u->top < u->size) {
-        u->stack[(u->top)++] = item; 
+    if(mainstack->top < mainstack->size) {
+        mainstack->stack[(mainstack->top)++] = item; 
     } else {
         printf("error: stack full, can't push\n");
     }
 }
-pyobject* pop(STACK * u) 
+pyobject* pop(void) 
 {
-    if(u->top > 0) {
-        return u->stack[--(u->top)];  
+    if(mainstack->top > 0) {
+        return mainstack->stack[--(mainstack->top)];  
     } else {
         printf("error: stack empty\n");
     }
@@ -968,7 +1021,7 @@ double binarypower(double x, double y)
 }
 */
 
-pyobject * create_new_list(STACK *mainstack, int size)
+pyobject * create_new_list(int size)
 {
     int i;
     pyobject  *current, *head;
@@ -978,12 +1031,12 @@ pyobject * create_new_list(STACK *mainstack, int size)
         if(head == NULL) {
             head = create_new_object();
             head->type = '[';
-            head->data = (void *)pop(mainstack);
+            head->data = (void *)pop();
             head->ptr = NULL; 
         } else {
             current = create_new_object(); 
             current->type = '[';
-            current->data = (void *)pop(mainstack);
+            current->data = (void *)pop();
             current->ptr = (void*)head;
             head = current;
         }
