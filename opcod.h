@@ -36,7 +36,7 @@
 #define  DELETE_SLICE1  51
 #define  DELETE_SLICE2  52
 #define  DELETE_SLICE3  53
-#define  INPLACE_ADD     54
+#define  INPLACE_ADD     55
 #define  INPLACE_SUBTRACT  56
 #define  INPLACE_MULTIPLY  57
 #define  INPLACE_DEVIDE    58

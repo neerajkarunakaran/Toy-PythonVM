@@ -45,11 +45,13 @@ typedef struct codeobject_t {
     STACK *co_freevar;
     STACK *co_cellvar;
  } CODEOBJECT;
-
+static int cnt;
 CODEOBJECT *codeobj;
 STACK *mainstack;
 void call_execute(char *code);
-void read_file(FILE *fp);
+void read_file(FILE *fp); 
+CODEOBJECT * create_new_codeobj(CODEOBJECT *codeobj);  
+static int codeobjcount;
  //static int * create_new_bytecode(int codesize);
 /*
 double binarypower(double x, double y);  */
@@ -64,8 +66,8 @@ int main(int argc, char **argv)
 
 
     FILE *fp;          
-
-
+    codeobjcount = 0;
+    cnt = -1;
 
 
 
@@ -96,7 +98,7 @@ int main(int argc, char **argv)
     if((argc < 2) || (argc > 2)) { 
         perror("usage: enter file name, or too many arguments"); 
         exit(1); }
-    printf("Python 2.7.12 *************************************************************\n");
+    printf("****************************Python 2.7.12 ******************************\n\n");
 
     fp = fopen(argv[1], "rb");
     if(fp == NULL) { 
@@ -104,8 +106,9 @@ int main(int argc, char **argv)
         exit(1); }  
 
 
-    codeobj = (CODEOBJECT *) malloc(sizeof(CODEOBJECT)); 
-
+  //  codeobj = create_new_codeobj(); 
+ //   ++codeobjcount;
+  //  codeobj = create_new_codeobj();
     read_file(fp);
     fclose(fp);
     printf("Executing %s............................................................\n", codeobj[0].filename);
@@ -128,7 +131,9 @@ void read_file(FILE *fp)
 
     static int type, stringsize, i;
 
-    
+    codeobj = create_new_codeobj(codeobj);
+    ++codeobjcount;  
+    ++cnt;
 
     while((type = r_byte(fp)) != 'c') {
         ;
@@ -136,9 +141,12 @@ void read_file(FILE *fp)
 
   
 
-    codeobj[0].argcount = (int) r_value(4, fp);  printf("argcount = %d\n", codeobj[0].argcount);
-    codeobj[0].nlocals = (int) r_value(4, fp);  printf("nlocals = %d\n", codeobj[0].nlocals);
-    codeobj[0].stacksize = (int) r_value(4, fp);  printf("stacksize =  %d\n", codeobj[0].stacksize); 
+    codeobj[cnt].argcount = (int) r_value(4, fp); 
+ //   printf("argcount = %d\n", codeobj[cnt].argcount);
+    codeobj[cnt].nlocals = (int) r_value(4, fp);  
+ //   printf("nlocals = %d\n", codeobj[cnt].nlocals);
+    codeobj[cnt].stacksize = (int) r_value(4, fp);  
+ //   printf("stacksize =  %d\n", codeobj[cnt].stacksize); 
 
 
 
@@ -146,19 +154,19 @@ void read_file(FILE *fp)
         ;
     } 
 
-    codeobj[0].codesize = (int) r_value(4, fp);  
+    codeobj[cnt].codesize = (int) r_value(4, fp);  
     
 
 
 
 
 
-    codeobj[0].code = r_bytes(codeobj[0].codesize, fp); 
+    codeobj[cnt].code = r_bytes(codeobj[cnt].codesize, fp); 
 
 
 
 
-
+ //  for(i = 0; i < codeobj[cnt].codesize; i++) { printf("%d\n", codeobj[cnt].code[i]);}
 
 
 
@@ -168,181 +176,209 @@ void read_file(FILE *fp)
 
 
     type = r_byte(fp);
-    codeobj[0].constsize = r_value(4, fp); 
-    if((codeobj[0].co_const = create_new_datastack(codeobj[0].constsize)) == NULL) {
+    codeobj[cnt].constsize = r_value(4, fp); 
+    if((codeobj[cnt].co_const = create_new_datastack(codeobj[cnt].constsize)) == NULL) {
         printf("error: stack alloc @ 90\n"); }
 
-    if(codeobj[0].co_const == NULL) {
+    if(codeobj[cnt].co_const == NULL) {
         perror("consts alloc error");
         exit(1);
     }   
 
 
-    for(i = 0; i < codeobj[0].constsize; i++) {
+    for(i = 0; i < codeobj[cnt].constsize; i++) {
         type = r_byte(fp);
         if(type == 'i') {
 
-       codeobj[0].co_const->stack[i]->type = 'i';
-       codeobj[0].co_const->stack[i]->value = r_value(4, fp);           
+        codeobj[cnt].co_const->stack[i]->type = 'i';
+        codeobj[cnt].co_const->stack[i]->value = r_value(4, fp);           
             
         } 
         if(type == 'N') {
 
-            codeobj[0].co_const->stack[i]->type = 'N';
-            codeobj[0].co_const->stack[i]->value = 0;
+            codeobj[cnt].co_const->stack[i]->type = 'N';
+            codeobj[cnt].co_const->stack[i]->value = 0;
             
         }
         if(type == 't' || type == 's') {
             stringsize = (int) r_value(4, fp);
-            codeobj[0].co_const->stack[i]->type = 't';
-            codeobj[0].co_const->stack[i]->string = r_bytes(stringsize, fp);
+            codeobj[cnt].co_const->stack[i]->type = 't';
+            codeobj[cnt].co_const->stack[i]->string = r_bytes(stringsize, fp);
         }
+        if(type == 'c') {
+            codeobj[cnt].co_const->stack[i]->type = 'c';
+            codeobj[cnt].co_const->stack[i]->value = codeobjcount;
+            read_file(fp-3);        
+        }
+            
+            
+        
     } 
-
+/*
     printf("consts (");
-    if(codeobj[0].constsize){
-         for(i = 0; i < codeobj[0].constsize; i++ ){
-             if(codeobj[0].co_const->stack[i]->type == 'i') { printf("%d ", codeobj[0].co_const->stack[i]->value); }
-             if(codeobj[0].co_const->stack[i]->type == 't') { printf("%s ", codeobj[0].co_const->stack[i]->string); }
-             if(codeobj[0].co_const->stack[i]->type == 'f') { printf("%f ", codeobj[0].co_const->stack[i]->fl); }
-             if(codeobj[0].co_const->stack[i]->type == 'N') { printf("%d ", codeobj[0].co_const->stack[i]->value); }
+    if(codeobj[cnt].constsize){
+         for(i = 0; i < codeobj[cnt].constsize; i++ ){
+             if(codeobj[cnt].co_const->stack[i]->type == 'i') {
+                 printf("%d ", codeobj[cnt].co_const->stack[i]->value); }
+             if(codeobj[cnt].co_const->stack[i]->type == 't') 
+                { printf("%s ", codeobj[cnt].co_const->stack[i]->string); }
+             if(codeobj[cnt].co_const->stack[i]->type == 'f') { 
+                printf("%f ", codeobj[cnt].co_const->stack[i]->fl); }
+             if(codeobj[cnt].co_const->stack[i]->type == 'N') { 
+                printf("%d ", codeobj[cnt].co_const->stack[i]->value); }
          }  
     } else {
         printf(" ");
-    } printf(")\n");     
+    } printf(")\n");    
+
+ */
     type = r_byte(fp); 
     if(type == '(') {
  
-    codeobj[0].namesize = (int) r_value(4, fp);
+    codeobj[cnt].namesize = (int) r_value(4, fp);
 
-    if((codeobj[0].co_names = create_new_datastack(codeobj[0].namesize)) == NULL) {printf(" alloc error @163\n");} 
+    if((codeobj[cnt].co_names = create_new_datastack(codeobj[cnt].namesize)) == NULL) {printf(" alloc error @163\n");} 
     }
 
 
-    for(i = 0; i < codeobj[0].namesize; i++) {
+    for(i = 0; i < codeobj[cnt].namesize; i++) {
         type = r_byte(fp);
         if(type == 't'){ 
             stringsize = (int) r_value(4, fp);
-            codeobj[0].co_names->stack[i]->type = 't';
-            codeobj[0].co_names->stack[i]->string = r_bytes(stringsize, fp); }
+            codeobj[cnt].co_names->stack[i]->type = 't';
+            codeobj[cnt].co_names->stack[i]->string = r_bytes(stringsize, fp); }
         if(type == 'i') {
-            codeobj[0].co_names->stack[i]->type = 'i';    
-            codeobj[0].co_names->stack[i]->value = (int) r_value(4, fp); }
+            codeobj[cnt].co_names->stack[i]->type = 'i';    
+            codeobj[cnt].co_names->stack[i]->value = (int) r_value(4, fp); }
 
     }
+/*
     printf("names(");
-    if(codeobj[0].namesize) { 
-        for(i = 0; i < codeobj[0].namesize; i++) {
-            type = codeobj[0].co_names->stack[i]->type;
+    if(codeobj[cnt].namesize) { 
+        for(i = 0; i < codeobj[cnt].namesize; i++) {
+            type = codeobj[cnt].co_names->stack[i]->type;
             if(type == 't') { 
-                printf("%s ", codeobj[0].co_names->stack[i]->string);}
+                printf("%s ", codeobj[cnt].co_names->stack[i]->string);}
             if(type == 'i') {
-                printf("%d ", codeobj[0].co_names->stack[i]->value); }
+                printf("%d ", codeobj[cnt].co_names->stack[i]->value); }
         }
     } else {
         printf(" ");
     }   printf(")\n");    
-
-       
+*/
+      
     r_byte(fp);
-    codeobj[0].varnamesize = (int) r_value(4, fp);
-    if(codeobj[0].varnamesize) {
-        codeobj[0].co_varname = create_new_datastack(codeobj[0].varnamesize); 
-        for(i = 0; i < codeobj[0].varnamesize; i++) {
+    codeobj[cnt].varnamesize = (int) r_value(4, fp);
+    if(codeobj[cnt].varnamesize) {
+        codeobj[cnt].co_varname = create_new_datastack(codeobj[cnt].varnamesize); 
+        for(i = 0; i < codeobj[cnt].varnamesize; i++) {
             type = r_byte(fp);
             if(type == 'i') {
-                codeobj[0].co_varname->stack[i]->type = 'i';
-                codeobj[0].co_varname->stack[i]->value = (int)r_value(4, fp); }
+                codeobj[cnt].co_varname->stack[i]->type = 'i';
+                codeobj[cnt].co_varname->stack[i]->value = (int)r_value(4, fp); }
             if(type == 't') {
-                codeobj[0].co_varname->stack[i]->type = 't';
+                codeobj[cnt].co_varname->stack[i]->type = 't';
                 stringsize = (int) r_value(4, fp);
-                codeobj[0].co_varname->stack[i]->string = r_bytes(stringsize, fp); }
+                codeobj[cnt].co_varname->stack[i]->string = r_bytes(stringsize, fp); }
         }
     }
+
+/*
     printf("varname (");
-    if(codeobj[0].varnamesize) {
-        for(i = 0; i < codeobj[0].varnamesize; i++) {
-            type = codeobj[0].co_varname->stack[i]->type;
+    if(codeobj[cnt].varnamesize) {
+        for(i = 0; i < codeobj[cnt].varnamesize; i++) {
+            type = codeobj[cnt].co_varname->stack[i]->type;
             if(type == 'i') {
-                printf("%d ", codeobj[0].co_varname->stack[i]->value); }
+                printf("%d ", codeobj[cnt].co_varname->stack[i]->value); }
             if(type == 't') {
-                printf("%s ", codeobj[0].co_varname->stack[i]->string);} 
+                printf("%s ", codeobj[cnt].co_varname->stack[i]->string);} 
         }
     } else {
         printf(" ");
     } printf(")\n");
+*/
 
     r_byte(fp);
-    codeobj[0].freevarsize = (int) r_value(4, fp); 
+    codeobj[cnt].freevarsize = (int) r_value(4, fp); 
 
-    if(codeobj[0].freevarsize){
-        codeobj[0].co_freevar = create_new_datastack(codeobj[0].freevarsize);
-        for(i = 0; i < codeobj[0].freevarsize; i++) {
+    if(codeobj[cnt].freevarsize){
+        codeobj[cnt].co_freevar = create_new_datastack(codeobj[cnt].freevarsize);
+        for(i = 0; i < codeobj[cnt].freevarsize; i++) {
             type = r_byte(fp);
             if(type == 'i') {
-                codeobj[0].co_freevar->stack[i]->type = 'i';
-                codeobj[0].co_freevar->stack[i]->value = (int) r_value(4, fp); }
+                codeobj[cnt].co_freevar->stack[i]->type = 'i';
+                codeobj[cnt].co_freevar->stack[i]->value = (int) r_value(4, fp); }
             if(type == 't') {
                 stringsize = (int) r_value(4, fp);
-                codeobj[0].co_freevar->stack[i]->type = 't';
-                codeobj[0].co_freevar->stack[i]->string = r_bytes(stringsize, fp); }
+                codeobj[cnt].co_freevar->stack[i]->type = 't';
+                codeobj[cnt].co_freevar->stack[i]->string = r_bytes(stringsize, fp); }
         }
-    } printf("freevar (");
-    if(codeobj[0].freevarsize) {
-        for(i = 0; i < codeobj[0].freevarsize; i++) {
-            type = codeobj[0].co_freevar->stack[i]->type;
+    }
+
+ /*   printf("freevar (");
+    if(codeobj[cnt].freevarsize) {
+        for(i = 0; i < codeobj[cnt].freevarsize; i++) {
+            type = codeobj[cnt].co_freevar->stack[i]->type;
             if(type == 'i') {
-                printf("%d ", codeobj[0].co_freevar->stack[i]->value); }
+                printf("%d ", codeobj[cnt].co_freevar->stack[i]->value); }
             if(type == 't') {
-                printf("%s ", codeobj[0].co_freevar->stack[i]->string); }
+                printf("%s ", codeobj[cnt].co_freevar->stack[i]->string); }
         }
     } else {
         printf(" ");
     } printf(")\n");
+*/
+
     r_byte(fp);        
-    codeobj[0].cellvarsize = (int) r_value(4, fp);
-    if(codeobj[0].cellvarsize) {
-        codeobj[0].co_cellvar = create_new_datastack(codeobj[0].cellvarsize);
-        for(i = 0; i < codeobj[0].cellvarsize; i++) {
+    codeobj[cnt].cellvarsize = (int) r_value(4, fp);
+    if(codeobj[cnt].cellvarsize) {
+        codeobj[cnt].co_cellvar = create_new_datastack(codeobj[cnt].cellvarsize);
+        for(i = 0; i < codeobj[cnt].cellvarsize; i++) {
             type = r_byte(fp);
             if(type == 'i') {
-                codeobj[0].co_cellvar->stack[i]->type = 'i';
-                codeobj[0].co_cellvar->stack[i]->value = (int) r_value(4, fp); }
+                codeobj[cnt].co_cellvar->stack[i]->type = 'i';
+                codeobj[cnt].co_cellvar->stack[i]->value = (int) r_value(4, fp); }
             if(type == 't') {
-                codeobj[0].co_cellvar->stack[i]->type == 't';
+                codeobj[cnt].co_cellvar->stack[i]->type == 't';
                 stringsize = (int) r_value(4, fp);
-                codeobj[0].co_cellvar->stack[i]->string = r_bytes(stringsize, fp); }
+                codeobj[cnt].co_cellvar->stack[i]->string = r_bytes(stringsize, fp); }
         }
-    } printf("cellvar (");
-    if(codeobj[0].cellvarsize) {
-        for(i = 0; i < codeobj[0].cellvarsize; i++) {
-            type = codeobj[0].co_cellvar->stack[i]->type;
+    }
+
+ /*   printf("cellvar (");
+    if(codeobj[cnt].cellvarsize) {
+        for(i = 0; i < codeobj[cnt].cellvarsize; i++) {
+            type = codeobj[cnt].co_cellvar->stack[i]->type;
             if(type == 'i') {
-                printf("%d ", codeobj[0].co_cellvar->stack[i]->value); }
+                printf("%d ", codeobj[cnt].co_cellvar->stack[i]->value); }
             if(type == 't') {
-                printf("%s ", codeobj[0].co_cellvar->stack[i]->string); }
+                printf("%s ", codeobj[cnt].co_cellvar->stack[i]->string); }
         }
     } else {
         printf(" ");
     } printf(")\n");
+*/
 
     if((type = r_byte(fp)) == 's') {
         stringsize = (int) r_value(4, fp);
        
-        codeobj[0].filename = r_bytes(stringsize, fp);  printf("filename: %s\n", codeobj[0].filename);
+        codeobj[cnt].filename = r_bytes(stringsize, fp);  
+  //      printf("filename: %s\n", codeobj[cnt].filename);
     }
 
 
     if((type = r_byte(fp)) == 't') {
         stringsize = (int) r_value(4, fp);
         
-        codeobj[0].functionname = r_bytes(stringsize, fp);  printf("name : %s\n", codeobj[0].functionname);
+        codeobj[cnt].functionname = r_bytes(stringsize, fp);  
+ //       printf("name : %s\n", codeobj[cnt].functionname);
     }
 
-    codeobj[0].firstlineno = (int) r_value(4, fp); printf("firstlineno : %d\n", codeobj[0].firstlineno);
-    
+    codeobj[cnt].firstlineno = (int) r_value(4, fp); 
+ //   printf("firstlineno : %d\n", codeobj[cnt].firstlineno);
     
 
+    r_bytes(8, fp);
 
 
 
@@ -370,7 +406,7 @@ void call_execute(char *code)
     int i, pcount, type, codecount, stringsize;
     pcount = 0;
     codecount = 0;
-    while(pcount < codeobj[0].codesize) {
+    while(pcount < codeobj[0].codesize ) {
         type = codeobj[0].code[pcount++];  
         switch(type) {
             case NOP :
@@ -638,15 +674,15 @@ void call_execute(char *code)
                 temp = pop();
                 temp1 = pop();
                 if(temp1->type == 'i' && temp->type == 'i') {
-                    temp1->value = temp1->value + temp->value; }
+                    temp1->value = temp1->value - temp->value; }
                 if(temp1->type == 'i' && temp->type == 'f') {
                     temp1->type = 'f';
-                    temp1->fl = (float)(temp1->value) + temp->fl; }
+                    temp1->fl = (float)(temp1->value) - temp->fl; }
                 if(temp1->type == 'f' && temp->type == 'i') {
                     temp1->type = 'f';
-                    temp1->fl = temp1->fl + (float)(temp->value); }
+                    temp1->fl = temp1->fl - (float)(temp->value); }
                 if(temp1->type == 'f' && temp->type == 'f') {
-                    temp1->fl = temp1->fl + temp->fl; }
+                    temp1->fl = temp1->fl - temp->fl; }
                 push(temp1);
                 break;
 
@@ -882,7 +918,85 @@ void call_execute(char *code)
                         pcount = pcount + 2;
                     }
                 }
-                break;                                      
+                break;  
+
+            case JUMP_IF_TRUE :
+                type = codeobj[0].code[pcount];
+                result = pop();
+                if(result->type == 'b') {
+                    if(result->boolvalue == true ) {
+                        pcount = type;
+                    } else {    
+                        pcount = pcount + 2;
+                    }
+                }
+                push(result);
+                break;
+
+            case JUMP_FORWARD :
+                type = codeobj[0].code[pcount];
+                pcount = pcount + type +2;
+                break;
+            case JUMP_ABSOLUTE :
+                pcount = codeobj[0].code[pcount]; 
+                break;
+            case UNARY_POSETIVE :
+                result = pop();  
+                if(result->type == 'i'){
+                    result->value = (result->value) + 1; }
+                if(result->type == 'f') {
+                    result->fl = (result->fl)+ 1; }
+                push(result);
+                break;
+            case UNARY_NEGATIVE :
+                result = pop();
+                if(result->type == 'i') {
+                    result->value = (result->value) - 1; }
+                if(result->type == 'f') {
+                    result->fl = (result->fl) - 1; }
+                push(result);
+                break;
+            case UNARY_NOT :
+                result = pop();
+                temp = create_new_object();
+                
+                if(result->type == 'i') {
+                    temp->type = 'i';    
+                    temp->value = !(result->value); }    
+                if(result->type == 'f') {
+                    temp->type == 'f';
+                    temp->fl = !(result->fl); }
+                push(temp);
+                break;
+
+            case UNARY_INVERT :
+                result = pop();
+                if(result->type == 'i') {
+                    result->value = ~(result->value);}
+
+
+                push(result);
+                break;
+            case SETUP_LOOP :
+                pcount = pcount + 2;
+                break;
+
+            case POP_TOP :
+                pop();
+                break;
+            case POP_BLOCK :
+                pcount = pcount +1;
+                break;
+
+
+
+
+
+
+
+                    
+                           
+                        
             default:   
                   
                 break;
@@ -1043,7 +1157,20 @@ pyobject * create_new_list(int size)
     } 
     return  head;
 }   
-    
+
+CODEOBJECT *create_new_codeobj(CODEOBJECT *codeobj)
+{
+
+  
+    CODEOBJECT *new;
+    if(codeobjcount == 0) {
+        new = (CODEOBJECT *) malloc(sizeof(CODEOBJECT));
+    } else {
+        new = realloc(codeobj, codeobjcount + 1);
+    }
+    return new;
+}
+
 
 
 
