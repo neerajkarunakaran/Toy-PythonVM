@@ -45,9 +45,17 @@ typedef struct codeobject_t {
     STACK *co_freevar;
     STACK *co_cellvar;
  } CODEOBJECT;
+
+typedef struct block_stack {
+    int top;
+    int size;
+    char **stack;
+}BLOCKSTACK;
 static int cnt;
 CODEOBJECT *codeobj;
-STACK *mainstack;
+BLOCKSTACK *blockstack;
+STACK * mainstack;
+BLOCKSTACK * create_new_blockstack(void); 
 void call_execute(char *code);
 void read_file(FILE *fp); 
 CODEOBJECT * create_new_codeobj(CODEOBJECT *codeobj);  
@@ -58,7 +66,10 @@ double binarypower(double x, double y);  */
 STACK * create_new_datastack(int size);
 void push(pyobject *item);
 pyobject*  pop(void);
-STACK * create_new_stack(int size);
+    
+STACK * create_new_localstack(int size);
+void pushblock(char * code);  
+char * popblock(void); 
 pyobject * create_new_object();
 pyobject * create_new_list(int size);
 int main(int argc, char **argv)
@@ -109,13 +120,13 @@ int main(int argc, char **argv)
   //  codeobj = create_new_codeobj(); 
  //   ++codeobjcount;
   //  codeobj = create_new_codeobj();
-    read_file(fp);
+    read_file(fp); 
     fclose(fp);
-    printf("Executing %s............................................................\n", codeobj[0].filename);
+    printf("Executing %s............................................................\n", codeobj[cnt].filename);
 
 
     
-    if((mainstack = create_new_stack(codeobj[0].stacksize)) == NULL) {
+    if((mainstack = create_new_localstack(codeobj[0].stacksize)) == NULL) {
         printf("stack alloc error @ 153\n"); }
    
     call_execute(codeobj[0].code);
@@ -406,6 +417,7 @@ void call_execute(char *code)
     int i, pcount, type, codecount, stringsize;
     pcount = 0;
     codecount = 0;
+    blockstack = create_new_blockstack();
     while(pcount < codeobj[0].codesize ) {
         type = codeobj[0].code[pcount++];  
         switch(type) {
@@ -909,7 +921,7 @@ void call_execute(char *code)
                 push(result);
                 break;
             case JUMP_IF_FALSE :
-                type = codeobj[0].code[pcount];
+                type = codeobj[0].code[pcount]; 
                 result = pop();
                 if(result->type == 'b') {
                     if(result->boolvalue ==  false) {
@@ -978,14 +990,15 @@ void call_execute(char *code)
                 push(result);
                 break;
             case SETUP_LOOP :
-                pcount = pcount + 2;
+                type = codeobj[0].code[pcount++];
+                type = codeobj[0].code[pcount++]; 
                 break;
 
             case POP_TOP :
                 pop();
                 break;
             case POP_BLOCK :
-                pcount = pcount +1;
+                pcount = pcount +1;  
                 break;
 
 
@@ -1103,7 +1116,7 @@ STACK * create_new_datastack(int size)
 }
 
 
-STACK * create_new_stack(int size)
+STACK * create_new_localstack(int size)
 {
     STACK * new = (STACK *) malloc(sizeof(STACK));
     new->top = 0;
@@ -1171,9 +1184,33 @@ CODEOBJECT *create_new_codeobj(CODEOBJECT *codeobj)
     return new;
 }
 
+BLOCKSTACK * create_new_blockstack() 
+{
+    BLOCKSTACK * new;
+    new = (BLOCKSTACK *) malloc(sizeof(BLOCKSTACK));
+    new->top = 0;
+    new->size = 5;
+    new->stack = (char **) malloc( 5 * sizeof(char*)); 
+    return new;
+}
 
+void pushblock(char * code)
+{
+    if(blockstack->top < blockstack->size) {
+        blockstack->stack[(blockstack->top)++] = code;
+    } else {
+        printf("error: blockstack full, can't push \n");
+    }
+}
 
-
+char * popblock(void)
+{
+    if(blockstack->top > 0) {
+        return blockstack->stack[--(blockstack->top)];
+    } else {
+        printf("error: blockstack empty \n");
+    }
+}
 
         
 
