@@ -1,3 +1,9 @@
+  /* main function of pyvm.....
+    contain two major functions... 
+    read_file and call_execute...
+    both are recursively call. */
+
+
 #include "opcod.h"    /* opcode header */
 #include "pyvm.h"   /* virtual machine header */
 #include <string.h>
