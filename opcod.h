@@ -101,8 +101,8 @@
 #define  STORE_FAST     125
 #define  DELETE_FAST    126
 #define  RAISE_VARARGS  130
-#define  CALL_FUNCTION  131
-#define  MAKE_FUNCTION  132
+#define  CALL_FUNCTION  -125
+#define  MAKE_FUNCTION  -124
 #define  BUILD_SLICE    133
 #define  MAKE_CLOSURE   134
 #define  LOAD_CLOSURE   135
