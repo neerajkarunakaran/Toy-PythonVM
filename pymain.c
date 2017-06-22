@@ -114,14 +114,14 @@ int main(int argc, char **argv)
 
     /* starting of first codeobject */ 
     while((type = r_byte(fp)) != 'c') { 
-        ; }
+        ; }  
 
     /* function for recursively read codeobjects and store into datablock */
     read_file(fp);   
 
     printf("Executing %s............................................................\n", codeobj[cnt].filename);
     
-    if((mainstack = create_new_localstack(codeobj[0].stacksize)) == NULL) {
+    if((mainstack = create_new_localstack(codeobj[cnt].stacksize)) == NULL) {
         printf("stack alloc error @ 153\n"); }
  
     /* function for recursively execute all codeobjects  */  
@@ -148,15 +148,15 @@ void read_file(FILE *fp)
 
     /*  get argcount */
     codeobj[cnt].argcount = (int) r_value(4, fp);        
- //  printf("argcount = %d\n", codeobj[cnt].argcount);
+  //printf("argcount = %d\n", codeobj[cnt].argcount);
 
     /* get nlocals */
     codeobj[cnt].nlocals = (int) r_value(4, fp);  
- //   printf("nlocals = %d\n", codeobj[cnt].nlocals);
+   //printf("nlocals = %d\n", codeobj[cnt].nlocals);
 
     /* get stacksize */
     codeobj[cnt].stacksize = (int) r_value(4, fp);  
- //  printf("stacksize =  %d\n", codeobj[cnt].stacksize); 
+   //printf("stacksize =  %d\n", codeobj[cnt].stacksize); 
 
     /* check for starting of bytecode string */
     while((type = r_byte(fp)) != 's') { 
@@ -170,7 +170,7 @@ void read_file(FILE *fp)
 
     codeobj[cnt].code = r_bytes(codeobj[cnt].codesize, fp); 
  //for(i = 0; i < codeobj[cnt].codesize; i++) { printf("%d\n", codeobj[cnt].code[i]);}
-  //printf("###\n");
+ //printf("###\n");
 
     type = r_byte(fp);
 
@@ -408,8 +408,8 @@ void read_file(FILE *fp)
  //   printf("firstlineno : %d\n", codeobj[cnt].firstlineno);
     
     r_byte (fp); 
-    stringsize = (int)r_value(4, fp);  
-    r_bytes(stringsize - 1, fp);
+    stringsize = (int)r_value(4, fp); 
+    r_bytes(stringsize - 1 , fp);
 }
  
 
@@ -419,7 +419,7 @@ void call_execute(char *code)
     pyobject *temp, *temp1, *temp2, *result;
     int i, pcount, type, codecount, stringsize;
     pcount = 0;
-    codecount = 0;
+   
 
     /* create new block stack for hold loop, try,except instruction */
     blockstack = create_new_blockstack();
@@ -1030,22 +1030,27 @@ void call_execute(char *code)
 
             case MAKE_FUNCTION :
                 result = pop();
-                if(result->type == 'c') {
+                if(result->type == 'c') { 
                 
-                    temp = create_new_object();           
-                    temp->type = 't';
-                    temp->string = codeobj[result->value].functionname;
+                    result->string = codeobj[result->value].code;        
+                    
+                    push(result);
                     }
                     pcount = pcount + 2;
                     break;  
 
-            case CALL_FUNCTION : printf("enter\n");
-                type = codeobj[cnt].code[pcount];
+            case CALL_FUNCTION : 
+                result = pop();
+                if(result->type == 'c') {
                 newcnt = cnt;
                 newpcount = pcount;
-                call_execute(codeobj[1].code); 
+                ++cnt;
+                call_execute(result->string); 
                 cnt = newcnt;
                 pcount = newpcount;
+                } else {
+                pcount = pcount + 2; }
+
                 break;    
                         
             default:   
