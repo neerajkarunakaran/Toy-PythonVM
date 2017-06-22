@@ -95,7 +95,8 @@ int main(int argc, char **argv)
     codeobjcount = 0;
     cnt = -1;
     int type;
-    int magic, ftime; 
+    int magic;
+
     /* input arguments checking */
     if((argc < 2) || (argc > 2)) {      
         perror("usage: enter file name, or too many arguments"); 
@@ -112,10 +113,16 @@ int main(int argc, char **argv)
  //   ++codeobjcount;
   //  codeobj = create_new_codeobj();
     magic = (int) r_value(4, fp);   
-    ftime = (int) r_value(4, fp); 
+    
     if(magic != 168686339) {
         printf("version not support\n");
         exit(1); }
+
+
+
+
+
+
 
     /* starting of first codeobject */ 
     while((type = r_byte(fp)) != 'c') { 
