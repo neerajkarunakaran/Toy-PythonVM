@@ -2,18 +2,14 @@
      contain two major functions... 
      read_file and call_execute...
      both are recursively call. */
-
-
 #include "opcod.h"		/* opcode header */
 #include "pyvm.h"		/* virtual machine header */
 #include <string.h>
 #include <math.h>
-
 #define SIZEOF_LONG 8		/* size of long */
 #define bool int
 #define true 1
 #define false 0
-
 /* pyobject  */
 typedef struct pyobject_t
 {
@@ -25,9 +21,7 @@ typedef struct pyobject_t
   void *ptr;
   float fl;
   int ref;
-
 } pyobject;
-
 /* data and execution stack */
 typedef struct STACK_t
 {
@@ -35,7 +29,6 @@ typedef struct STACK_t
   int size;
   pyobject **stack;
 } STACK;
-
 /* codeobjects */
 typedef struct codeobject_t
 {
@@ -53,13 +46,11 @@ typedef struct codeobject_t
   char *functionname;
   char *code;
   STACK *co_const;
-
   STACK *co_names;
   STACK *co_varname;
   STACK *co_freevar;
   STACK *co_cellvar;
 } CODEOBJECT;
-
 /* stack for hold codeblock */
 typedef struct block_stack
 {
@@ -67,12 +58,10 @@ typedef struct block_stack
   int size;
   char **stack;
 } BLOCKSTACK;
-
 static int cnt;
 CODEOBJECT *codeobj;
 BLOCKSTACK *blockstack;
 STACK *mainstack;
-
 BLOCKSTACK *create_new_blockstack (void);
 void call_execute (char *code);
 void read_file (FILE * fp);
@@ -91,8 +80,6 @@ void pushblock (char *code);
 char *popblock (void);
 pyobject *create_new_object ();
 pyobject *create_new_list (int size);
-
-
 int
 main (int argc, char **argv)
 {
@@ -101,72 +88,53 @@ main (int argc, char **argv)
   cnt = -1;
   int type;
   int magic;
-
   /* input arguments checking */
   if ((argc < 2) || (argc > 2))
     {
       perror ("usage: enter file name, or too many arguments");
       exit (1);
     }
-
   printf
     ("****************************Python 2.7.12 ******************************\n\n");
-
   fp = fopen (argv[1], "rb");
   if (fp == NULL)
     {
       printf ("can't open file %s\n", argv[1]);
       exit (1);
     }
-
   //  codeobj = create_new_codeobj(); 
   //   ++codeobjcount;
   //  codeobj = create_new_codeobj();
   magic = (int) r_value (4, fp);
-
   if (magic != 168686339)
     {
       printf ("version not support\n");
       exit (1);
     }
-
-
-
-
-
-
-
   /* starting of first codeobject */
   while ((type = r_byte (fp)) != 'c')
     {
       ;
     }
-
   /* function for recursively read codeobjects and store into datablock */
   read_file (fp);
-
   printf
     ("Executing %s............................................................\n",
      codeobj[cnt].filename);
-
   if ((mainstack = create_new_localstack (codeobj[cnt].stacksize)) == NULL)
     {
       printf ("stack alloc error @ 153\n");
     }
-
   /* function for recursively execute all codeobjects  */
   call_execute (codeobj[cnt].code);
-
   free (mainstack);
   return 0;
 }
-
 /* function for recursively read all codeobjects and store into datablock */
 void
 read_file (FILE * fp)
 {
   static int type, stringsize, i;
-
   /* create new codeobject */
   if ((codeobj = create_new_codeobj (codeobj)) == NULL)
     {
@@ -174,43 +142,29 @@ read_file (FILE * fp)
     }
   ++codeobjcount;
   ++cnt;
-
-
-
-
-
   /*  get argcount */
   codeobj[cnt].argcount = (int) r_value (4, fp);
   // printf("argcount = %d\n", codeobj[cnt].argcount);
-
   /* get nlocals */
   codeobj[cnt].nlocals = (int) r_value (4, fp);
   //printf("nlocals = %d\n", codeobj[cnt].nlocals);
-
   /* get stacksize */
   codeobj[cnt].stacksize = (int) r_value (4, fp);
   //printf("stacksize =  %d\n", codeobj[cnt].stacksize); 
-
   /* check for starting of bytecode string */
   while ((type = r_byte (fp)) != 's')
     {
       ;
     }
-
   /* get codesize */
   codeobj[cnt].codesize = (int) r_value (4, fp);
-
   // printf("codesize = %d\n", codeobj[cnt].codesize);
-
   codeobj[cnt].code = r_bytes (codeobj[cnt].codesize, fp);
   //for(i = 0; i < codeobj[cnt].codesize; i++) { printf("%d\n", codeobj[cnt].code[i]);}
   //printf("###\n");
-
   type = r_byte (fp);
-
   /* get co_const size */
   codeobj[cnt].constsize = r_value (4, fp);
-
   /* create new datablock for hold co_const */
   if ((codeobj[cnt].co_const =
        create_new_datastack (codeobj[cnt].constsize)) == NULL)
@@ -222,7 +176,6 @@ read_file (FILE * fp)
       perror ("consts alloc error");
       exit (1);
     }
-
   /* get all conts on codeobject */
   for (i = 0; i < codeobj[cnt].constsize; i++)
     {
@@ -231,13 +184,11 @@ read_file (FILE * fp)
 	{
 	  codeobj[cnt].co_const->stack[i]->type = 'i';
 	  codeobj[cnt].co_const->stack[i]->value = r_value (4, fp);
-
 	}
       if (type == 'N')
 	{
 	  codeobj[cnt].co_const->stack[i]->type = 'N';
 	  codeobj[cnt].co_const->stack[i]->value = 0;
-
 	}
       if (type == 't' || type == 's')
 	{
@@ -253,11 +204,7 @@ read_file (FILE * fp)
 	  read_file (fp);
 	  cnt = newcnt;
 	}
-
-
-
     }
-
   /* print all consts */
 /*
     printf("consts (");
@@ -278,13 +225,11 @@ read_file (FILE * fp)
         printf(" ");
     } printf(")\n");    
 */
-
   type = r_byte (fp);
   if (type == '(')
     {
       /* get namesize */
       codeobj[cnt].namesize = (int) r_value (4, fp);
-
       /* create new datablock for hold names */
       if ((codeobj[cnt].co_names =
 	   create_new_datastack (codeobj[cnt].namesize)) == NULL)
@@ -292,7 +237,6 @@ read_file (FILE * fp)
 	  printf (" alloc error @163\n");
 	}
     }
-
   /* get all names onto codeobject */
   for (i = 0; i < codeobj[cnt].namesize; i++)
     {
@@ -314,7 +258,6 @@ read_file (FILE * fp)
 	  codeobj[cnt].co_names->stack[i]->value = (int) r_value (4, fp);
 	}
     }
-
   /* print names */
 /*
     printf("names(");
@@ -333,12 +276,9 @@ read_file (FILE * fp)
         printf(" ");
     }   printf(")\n");    
 */
-
   r_byte (fp);
-
   /* get varnamesize */
   codeobj[cnt].varnamesize = (int) r_value (4, fp);
-
   /* create new datablock for hold varname onto codeobject */
   if (codeobj[cnt].varnamesize)
     {
@@ -362,7 +302,6 @@ read_file (FILE * fp)
 	    }
 	}
     }
-
   /* print varnames */
 /*
     printf("varname (");
@@ -378,12 +317,9 @@ read_file (FILE * fp)
         printf(" ");
     } printf(")\n");
 */
-
   r_byte (fp);
-
   /* get free varsize */
   codeobj[cnt].freevarsize = (int) r_value (4, fp);
-
   /* create newdatablock for hold freevar on codeobjetc */
   if (codeobj[cnt].freevarsize)
     {
@@ -407,7 +343,6 @@ read_file (FILE * fp)
 	    }
 	}
     }
-
   /* print freevar */
 /*
    printf("freevar (");
@@ -423,12 +358,9 @@ read_file (FILE * fp)
         printf(" ");
     } printf(")\n");
 */
-
   r_byte (fp);
-
   /* get cellvar size */
   codeobj[cnt].cellvarsize = (int) r_value (4, fp);
-
   /* create new datablock for hold cellvar on codeobject */
   if (codeobj[cnt].cellvarsize)
     {
@@ -452,7 +384,6 @@ read_file (FILE * fp)
 	    }
 	}
     }
-
   /* print cellvar */
 /*
    printf("cellvar (");
@@ -468,8 +399,6 @@ read_file (FILE * fp)
         printf(" ");
     } printf(")\n");
 */
-
-
   if ((type = r_byte (fp)) == 's')
     {
       stringsize = (int) r_value (4, fp);
@@ -477,7 +406,6 @@ read_file (FILE * fp)
       codeobj[cnt].filename = r_bytes (stringsize, fp);
       //     printf("filename: %s\n", codeobj[cnt].filename);
     }
-
   if ((type = r_byte (fp)) == 't')
     {
       stringsize = (int) r_value (4, fp);
@@ -485,11 +413,9 @@ read_file (FILE * fp)
       codeobj[cnt].functionname = r_bytes (stringsize, fp);
       //     printf("functionname : %s\n", codeobj[cnt].functionname);
     }
-
   /* read firstline number */
   codeobj[cnt].firstlineno = (int) r_value (4, fp);
   //   printf("firstlineno : %d\n", codeobj[cnt].firstlineno);
-
   r_byte (fp);
   stringsize = (int) r_value (4, fp);
   if (codeobj[cnt].argcount == 0)
@@ -505,8 +431,6 @@ read_file (FILE * fp)
       r_bytes (stringsize + 1, fp);
     }
 }
-
-
 /* recursively execute all codeobjects */
 void
 call_execute (char *code)
@@ -514,62 +438,41 @@ call_execute (char *code)
   pyobject *temp, *temp1, *temp2, *result;
   int i, pcount, type, codecount, stringsize;
   pcount = 0;
-
-
   /* create new block stack for hold loop, try,except instruction */
   blockstack = create_new_blockstack ();
-
   /* loop over all codeobjects */
   while (pcount < codeobj[cnt].codesize)
     {
       type = codeobj[cnt].code[pcount++];
-
       switch (type)
 	{
-
 	case NOP:
 	  break;
-
 	case LOAD_CONST:
 	  type = codeobj[cnt].code[pcount];
-
-
-
-
-
 	  push (codeobj[cnt].co_const->stack[type]);
 	  pcount = pcount + 2;
-
 	  break;
-
 	case STORE_NAME:
 	  type = codeobj[cnt].code[pcount];
 	  codeobj[cnt].co_names->stack[type]->ptr = (void *) pop ();
-
-
 	  pcount = pcount + 2;
 	  break;
-
-
 	case LOAD_NAME:
 	  type = codeobj[cnt].code[pcount];
 	  push ((pyobject *) (codeobj[cnt].co_names->stack[type]->ptr));
 	  pcount = pcount + 2;
 	  break;
-
 	case STORE_FAST:
 	  type = codeobj[cnt].code[pcount];
-
 	  codeobj[cnt].co_varname->stack[type]->ptr = (void *) pop ();
 	  pcount = pcount + 2;
 	  break;
-
 	case LOAD_FAST:
 	  type = codeobj[cnt].code[pcount];
 	  push ((pyobject *) (codeobj[cnt].co_varname->stack[type]->ptr));
 	  pcount = pcount + 2;
 	  break;
-
 	case BINARY_ADD:
 	  result = create_new_object ();
 	  temp = pop ();
@@ -586,9 +489,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case PRINT_ITEM:
-
 	  result = pop ();
 	  if (result->type == 'i')
 	    {
@@ -620,7 +521,6 @@ call_execute (char *code)
 	      while (result != NULL)
 		{
 		  temp = (pyobject *) (result->data);
-
 		  if (temp->type == 'i')
 		    {
 		      printf ("%d ", temp->value);
@@ -633,24 +533,16 @@ call_execute (char *code)
 		    {
 		      printf ("%s ", temp->string);
 		    }
-
-
 		  result = (pyobject *) (result->ptr);
 		}
 	      printf ("]\n");
 	    }
-
-
 	  break;
-
 	case PRINT_NEWLINE:
 	  printf ("\n");
 	  break;
-
 	case RETURN_VALUE:
-
 	  break;
-
 	case DELETE_NAME:
 	  type = codeobj[cnt].code[pcount];
 	  if ((codeobj[cnt].co_names->stack[type]->ref) == 0)
@@ -663,29 +555,23 @@ call_execute (char *code)
 	    }
 	  pcount = pcount + 2;
 	  break;
-
 	case STORE_GLOBAL:
 	  type = codeobj[cnt].code[pcount];
 	  codeobj[cnt].co_names->stack[type]->ptr = (void *) pop ();
 	  pcount = pcount + 2;
 	  break;
-
 	case LOAD_GLOBAL:
 	  type = codeobj[cnt].code[pcount];
 	  push ((pyobject *) (codeobj[cnt].co_names->stack[type]->ptr));
 	  pcount = pcount + 2;
 	  break;
-
 	case ROT_TWO:
-
 	  temp = pop ();
 	  temp1 = pop ();
 	  push (temp);
 	  push (temp1);
 	  break;
-
 	case ROT_THREE:
-
 	  temp = pop ();
 	  temp1 = pop ();
 	  temp2 = pop ();
@@ -705,11 +591,9 @@ call_execute (char *code)
                 break;  
 */
 	case BINARY_MULTIPLY:
-
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
-
 	  if (temp->type == 'i' && temp1->type == 'i')
 	    {
 	      result->value = (temp1->value) * (temp->value);
@@ -732,11 +616,8 @@ call_execute (char *code)
 	    }
 	  if (temp1->type == 't' && temp->type == 'i')
 	    {
-
-
 	      stringsize = strlen (temp1->string);
 	      stringsize = stringsize * (temp->value);
-
 	      if ((result->string =
 		   (char *) malloc (sizeof (char) * stringsize)) == NULL)
 		{
@@ -750,7 +631,6 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case BINARY_DEVIDE:
 	  result = create_new_object ();
 	  temp = pop ();
@@ -777,7 +657,6 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case BINARY_MODULO:
 	  result = create_new_object ();
 	  temp = pop ();
@@ -789,7 +668,6 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case BINARY_FLOOR_DEVIDE:
 	  result = create_new_object ();
 	  temp = pop ();
@@ -816,7 +694,6 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case BINARY_SUBTRACT:
 	  result = create_new_object ();
 	  temp = pop ();
@@ -843,7 +720,6 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case INPLACE_ADD:
 	  temp = pop ();
 	  temp1 = pop ();
@@ -870,7 +746,6 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-
 	case INPLACE_SUBTRACT:
 	  temp = pop ();
 	  temp1 = pop ();
@@ -894,7 +769,6 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-
 	case INPLACE_MULTIPLY:
 	  temp = pop ();
 	  temp1 = pop ();
@@ -919,7 +793,6 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-
 	case INPLACE_DEVIDE:
 	  temp = pop ();
 	  temp1 = pop ();
@@ -942,7 +815,6 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-
 	case INPLACE_MODULO:
 	  temp = pop ();
 	  temp1 = pop ();
@@ -952,7 +824,6 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-
 	case BINARY_LSHIFT:
 	  result = create_new_object ();
 	  temp = pop ();
@@ -964,7 +835,6 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case BINARY_RSHIFT:
 	  result = create_new_object ();
 	  temp = pop ();
@@ -976,7 +846,6 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case BINARY_AND:
 	  result = create_new_object ();
 	  temp = pop ();
@@ -988,7 +857,6 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case BINARY_XOR:
 	  result = create_new_object ();
 	  temp = pop ();
@@ -1000,7 +868,6 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case BINARY_OR:
 	  result = create_new_object ();
 	  temp = pop ();
@@ -1012,7 +879,6 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case INPLACE_RSHIFT:
 	  temp = pop ();
 	  temp1 = pop ();
@@ -1022,7 +888,6 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-
 	case INPLACE_LSHIFT:
 	  temp = pop ();
 	  temp1 = pop ();
@@ -1041,7 +906,6 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-
 	case INPLACE_OR:
 	  temp = pop ();
 	  temp1 = pop ();
@@ -1051,7 +915,6 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-
 	case INPLACE_XOR:
 	  temp = pop ();
 	  temp1 = pop ();
@@ -1061,7 +924,6 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-
 	case COMPARE_OP:
 	  type = codeobj[cnt].code[pcount];
 	  result = create_new_object ();
@@ -1243,13 +1105,11 @@ call_execute (char *code)
 	  pcount = pcount + 2;
 	  push (result);
 	  break;
-
 	case BUILD_LIST:
 	  type = codeobj[cnt].code[pcount];
 	  result = create_new_list (type);
 	  push (result);
 	  break;
-
 	case JUMP_IF_FALSE:
 	  type = codeobj[cnt].code[pcount];
 	  result = pop ();
@@ -1265,7 +1125,6 @@ call_execute (char *code)
 		}
 	    }
 	  break;
-
 	case JUMP_IF_TRUE:
 	  type = codeobj[cnt].code[pcount];
 	  result = pop ();
@@ -1282,16 +1141,13 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case JUMP_FORWARD:
 	  type = codeobj[cnt].code[pcount];
 	  pcount = pcount + type + 2;
 	  break;
-
 	case JUMP_ABSOLUTE:
 	  pcount = codeobj[cnt].code[pcount];
 	  break;
-
 	case UNARY_POSETIVE:
 	  result = pop ();
 	  if (result->type == 'i')
@@ -1304,7 +1160,6 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case UNARY_NEGATIVE:
 	  result = pop ();
 	  if (result->type == 'i')
@@ -1317,11 +1172,9 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case UNARY_NOT:
 	  result = pop ();
 	  temp = create_new_object ();
-
 	  if (result->type == 'i')
 	    {
 	      temp->type = 'i';
@@ -1334,7 +1187,6 @@ call_execute (char *code)
 	    }
 	  push (temp);
 	  break;
-
 	case UNARY_INVERT:
 	  result = pop ();
 	  if (result->type == 'i')
@@ -1343,31 +1195,24 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-
 	case SETUP_LOOP:
 	  type = codeobj[cnt].code[pcount];
 	  pcount = pcount + 2;
 	  break;
-
 	case POP_TOP:
 	  pop ();
 	  break;
 	case POP_BLOCK:
-
 	  break;
-
 	case MAKE_FUNCTION:
 	  result = pop ();
 	  if (result->type == 'c')
 	    {
-
 	      result->string = codeobj[result->value].code;
-
 	      push (result);
 	    }
 	  pcount = pcount + 2;
 	  break;
-
 	case CALL_FUNCTION:
 	  type = codeobj[cnt].code[pcount];
 	  if (codeobj[type].argcount == 1)
@@ -1382,8 +1227,6 @@ call_execute (char *code)
 	      codeobj[type].co_varname->stack[0]->ptr = (void *) temp1;
 	      codeobj[type].co_varname->stack[1]->ptr = (void *) temp2;
 	    }
-
-
 	  result = pop ();
 	  if (result->type == 'c')
 	    {
@@ -1394,20 +1237,14 @@ call_execute (char *code)
 	      cnt = newcnt;
 	      pcount = newpcount;
 	    }
-
 	  pcount = pcount + 2;
-
 	  break;
-
 	default:
 	  pcount = pcount + 2;
 	  break;
 	}
     }
-
 }
-
-
 /* read long value */
 long
 r_value (int n, FILE * p)
@@ -1427,7 +1264,6 @@ r_value (int n, FILE * p)
     }
   return x;
 }
-
 /* read string of bytes */
 static char *
 r_bytes (int n, FILE * p)
@@ -1437,7 +1273,6 @@ r_bytes (int n, FILE * p)
   fread (b, 1, n, p);
   return b;
 }
-
 /* read one byte */
 char
 r_byte (FILE * p)
@@ -1446,7 +1281,6 @@ r_byte (FILE * p)
   fread (&b, 1, 1, p);
   return b;
 }
-
 /* push pyobject onto stack */
 void
 push (pyobject * item)
@@ -1460,7 +1294,6 @@ push (pyobject * item)
       //printf("error: stack full, can't push\n");
     }
 }
-
 /*pop pyobject out of stack */
 pyobject *
 pop (void)
@@ -1474,7 +1307,6 @@ pop (void)
       //printf("error: stack empty\n");
     }
 }
-
 /* create new datastack for hold data associated with codeobject */
 STACK *
 create_new_datastack (int size)
@@ -1493,7 +1325,6 @@ create_new_datastack (int size)
     }
   return new;
 }
-
 /* create new local stack for hold object reference for execution */
 STACK *
 create_new_localstack (int size)
@@ -1504,7 +1335,6 @@ create_new_localstack (int size)
   new->stack = (pyobject **) malloc (size * sizeof (pyobject *));
   return new;
 }
-
 /* create new  data object */
 pyobject *
 create_new_object ()
@@ -1513,7 +1343,6 @@ create_new_object ()
   new = malloc (sizeof (pyobject));
   return new;
 }
-
 /*
 double binarypower(double x, double y)
 {
@@ -1528,7 +1357,6 @@ double binarypower(double x, double y)
     return ptr;
 }
 */
-
 /* create new list datastructure */
 pyobject *
 create_new_list (int size)
@@ -1557,12 +1385,10 @@ create_new_list (int size)
     }
   return head;
 }
-
 /* create new codeobject stack for each codeobject data */
 CODEOBJECT *
 create_new_codeobj (CODEOBJECT * codeobj)
 {
-
   CODEOBJECT *new;
   if (codeobjcount == 0)
     {
@@ -1580,7 +1406,6 @@ create_new_codeobj (CODEOBJECT * codeobj)
     }
   return new;
 }
-
 /* create new stack of blocks for hold loop, try, except code */
 BLOCKSTACK *
 create_new_blockstack ()
@@ -1592,7 +1417,6 @@ create_new_blockstack ()
   new->stack = (char **) malloc (5 * sizeof (char *));
   return new;
 }
-
 /* push code block onto blockstack */
 void
 pushblock (char *code)
@@ -1606,7 +1430,6 @@ pushblock (char *code)
       printf ("error: blockstack full, can't push \n");
     }
 }
-
 /* pop block out of blockstack */
 char *
 popblock (void)
