@@ -148,7 +148,7 @@ void read_file(FILE *fp)
 
     /*  get argcount */
     codeobj[cnt].argcount = (int) r_value(4, fp);        
-  //printf("argcount = %d\n", codeobj[cnt].argcount);
+ // printf("argcount = %d\n", codeobj[cnt].argcount);
 
     /* get nlocals */
     codeobj[cnt].nlocals = (int) r_value(4, fp);  
@@ -409,7 +409,12 @@ void read_file(FILE *fp)
     
     r_byte (fp); 
     stringsize = (int)r_value(4, fp); 
-    r_bytes(stringsize - 1 , fp);
+    if(codeobj[cnt].argcount == 0) {
+        r_bytes(stringsize - 1 , fp);}
+    if(codeobj[cnt].argcount == 1){
+        r_bytes(stringsize, fp); }
+    if(codeobj[cnt].argcount == 2) {
+        r_bytes(stringsize + 1, fp); }
 }
  
 
@@ -1040,16 +1045,27 @@ void call_execute(char *code)
                     break;  
 
             case CALL_FUNCTION : 
+                type = codeobj[cnt].code[pcount];
+                if(codeobj[type].argcount == 1) {
+                    temp1 = pop();
+                    codeobj[type].co_varname->stack[0]->ptr = (void *) temp1;}
+                if(codeobj[type].argcount == 2) {
+                    temp2 = pop();
+                    temp1= pop();
+                    codeobj[type].co_varname->stack[0]->ptr = (void *) temp1;
+                    codeobj[type].co_varname->stack[1]->ptr = (void *) temp2; }
+             
+                    
                 result = pop();
                 if(result->type == 'c') {
-                newcnt = cnt;
-                newpcount = pcount;
-                ++cnt;
-                call_execute(result->string); 
-                cnt = newcnt;
-                pcount = newpcount;
+                    newcnt = cnt;
+                    newpcount = pcount;
+                    ++cnt;
+                    call_execute(result->string); 
+                    cnt = newcnt;
+                    pcount = newpcount;
                 } else {
-                pcount = pcount + 2; }
+                    pcount = pcount + 2; }
 
                 break;    
                         
