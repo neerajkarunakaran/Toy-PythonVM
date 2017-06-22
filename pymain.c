@@ -95,7 +95,7 @@ int main(int argc, char **argv)
     codeobjcount = 0;
     cnt = -1;
     int type;
-    
+    int magic, time; 
     /* input arguments checking */
     if((argc < 2) || (argc > 2)) {      
         perror("usage: enter file name, or too many arguments"); 
@@ -111,6 +111,11 @@ int main(int argc, char **argv)
   //  codeobj = create_new_codeobj(); 
  //   ++codeobjcount;
   //  codeobj = create_new_codeobj();
+    magic = (int) r_value(4, fp);   
+    time = (int) r_value(4, fp); 
+    if(magic != 168686339) {
+        printf("version not support\n");
+        exit(1); }
 
     /* starting of first codeobject */ 
     while((type = r_byte(fp)) != 'c') { 
@@ -453,12 +458,13 @@ void call_execute(char *code)
             case STORE_NAME : 
                 type = codeobj[cnt].code[pcount]; 
                 codeobj[cnt].co_names->stack[type]->ptr = (void*)pop();
-                
+             
                 
                 pcount = pcount + 2;  
                 break;
 
-            case LOAD_NAME :
+
+            case LOAD_NAME : 
                 type = codeobj[cnt].code[pcount];
                 push((pyobject *)(codeobj[cnt].co_names->stack[type]->ptr)); 
                 pcount = pcount + 2;
@@ -486,13 +492,13 @@ void call_execute(char *code)
                     result->type = 'i'; }
                 if(temp->type == 't' && temp1->type == 't') {
                     result->string = strcat(temp1->string, temp->string);
-                    result->type = 't'; }
+                    result->type = 't'; }  
                 push(result);
                 break; 
 
             case PRINT_ITEM :
                 
-                result = pop();  
+                result = pop(); 
                 if(result->type == 'i') {
                     printf("%d", result->value); }
                 if(result->type == 't' || type == 's') {
@@ -532,7 +538,7 @@ void call_execute(char *code)
                 break;
 
             case RETURN_VALUE :
-                pop();  
+                
                 break;
 
             case DELETE_NAME :
@@ -1062,10 +1068,10 @@ void call_execute(char *code)
                     newpcount = pcount;
                     ++cnt;
                     call_execute(result->string); 
-                    cnt = newcnt;
-                    pcount = newpcount;
-                } else {
-                    pcount = pcount + 2; }
+                    cnt = newcnt;  
+                    pcount = newpcount; }
+               
+                pcount = pcount + 2; 
 
                 break;    
                         
