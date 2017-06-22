@@ -1117,7 +1117,7 @@ char r_byte(FILE *p)
     if(mainstack->top < mainstack->size) {
         mainstack->stack[(mainstack->top)++] = item; 
     } else {
-        printf("error: stack full, can't push\n");
+        //printf("error: stack full, can't push\n");
     }
 }
 
@@ -1127,7 +1127,7 @@ pyobject* pop(void)
     if(mainstack->top > 0) {
         return mainstack->stack[--(mainstack->top)];  
     } else {
-        printf("error: stack empty\n");
+        //printf("error: stack empty\n");
     }
 }
 
