@@ -31,7 +31,16 @@ typedef struct STACK_t
   int cnt;
   pyobject **stack;
 } STACK;
-/* codeobjects */
+/* function state record stack */
+typedef struct call
+{
+  int pcount;
+  int cnt;
+  pyobject *ret;
+} CALLSTACK;
+/* increase stack size */
+pyobject **increm_stack (int size);
+/* codeobject */
 typedef struct codeobject_t
 {
   int argcount;
@@ -116,7 +125,6 @@ main (int argc, char **argv)
   printf
     ("Executing %s............................................................\n",
      codeobj[cnt].filename);
-
   if ((mainstack = create_new_localstack (codeobj[cnt].stacksize)) == NULL)
     {
       printf ("alloc error @ 135\n");
@@ -156,11 +164,11 @@ read_file (FILE * fp)
   codeobj[cnt].codesize = (int) r_value (4, fp);
   // printf("codesize = %d\n", codeobj[cnt].codesize);
   codeobj[cnt].code = r_bytes (codeobj[cnt].codesize, fp);
-  /* for (i = 0; i < codeobj[cnt].codesize; i++)
+  /*for (i = 0; i < codeobj[cnt].codesize; i++)
      {
      printf ("%d\n", codeobj[cnt].code[i]);
      }
-     printf ("###\n"); */
+     printf ("###\n");  */
   type = r_byte (fp);
   /* get co_const size */
   codeobj[cnt].constsize = r_value (4, fp);
@@ -205,6 +213,11 @@ read_file (FILE * fp)
 	  cnt = newcnt;
 	  i = newi;
 	}
+      if (type == 'f')
+	{
+	  codeobj[cnt].co_const->stack[i]->type = 'f';
+	  codeobj[cnt].co_const->stack[i]->fl = r_value (4, fp);
+	}
     }
   /* print all consts */
 /*
@@ -233,6 +246,10 @@ read_file (FILE * fp)
 	    {
 	      printf ("%d ", codeobj[cnt].co_const->stack[i]->value);
 	    }
+      if( codeobj[cnt].co_const->stack[i]->type == 'f')
+        {
+          printf("%f ", codeobj[cnt].co_const->stack[i]->fl);
+        }
 	}
     }
   else
@@ -486,7 +503,7 @@ call_execute (char *code)
   pyobject *temp, *temp1, *temp2, *result, *arg1, *arg2, *arg3, *arg4;
   int i, pcount, type, codecount, stringsize;
   pcount = 0;
-  /* loop over all codeobjects */
+  /* loop over all instructions */
   while (pcount < codeobj[cnt].codesize)
     {
       type = codeobj[cnt].code[pcount++];
@@ -494,32 +511,32 @@ call_execute (char *code)
 	{
 	case NOP:
 	  break;
-	case LOAD_CONST:
+	case LOAD_CONST:	/* load const to stack */
 	  type = codeobj[cnt].code[pcount];
 	  push (codeobj[cnt].co_const->stack[type]);
 	  pcount = pcount + 2;
 	  break;
-	case STORE_NAME:
+	case STORE_NAME:	/* store ref of object to a name object */
 	  type = codeobj[cnt].code[pcount];
 	  codeobj[cnt].co_names->stack[type]->ptr = (void *) pop ();
 	  pcount = pcount + 2;
 	  break;
-	case LOAD_NAME:
+	case LOAD_NAME:	/* load name contain ref of object to stack */
 	  type = codeobj[cnt].code[pcount];
 	  push ((pyobject *) (codeobj[cnt].co_names->stack[type]->ptr));
 	  pcount = pcount + 2;
 	  break;
-	case STORE_FAST:
+	case STORE_FAST:	/* store ref of object to a varname objcet */
 	  type = codeobj[cnt].code[pcount];
 	  codeobj[cnt].co_varname->stack[type]->ptr = (void *) pop ();
 	  pcount = pcount + 2;
 	  break;
-	case LOAD_FAST:
+	case LOAD_FAST:	/* load varname contain ref of object to stack */
 	  type = codeobj[cnt].code[pcount];
 	  push ((pyobject *) (codeobj[cnt].co_varname->stack[type]->ptr));
 	  pcount = pcount + 2;
 	  break;
-	case BINARY_ADD:
+	case BINARY_ADD:	/* add object and push onto stack */
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
@@ -535,7 +552,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case PRINT_ITEM:
+	case PRINT_ITEM:	/* pop object from stack and print it on stdout */
 	  result = pop ();
 	  if (result->type == 'i')
 	    {
@@ -584,13 +601,16 @@ call_execute (char *code)
 	      printf ("]\n");
 	    }
 	  break;
-	case PRINT_NEWLINE:
+	case PRINT_NEWLINE:	/* print newline on stdout */
 	  printf ("\n");
 	  break;
-	case RETURN_VALUE:
-	  pushback ();
+	case RETURN_VALUE:	/* pop object from current stack and push onto previous stack */
+	  if (stackcount > 1)
+	    {
+	      pushback ();
+	    }
 	  break;
-	case DELETE_NAME:
+	case DELETE_NAME:	/* delete name from name list */
 	  type = codeobj[cnt].code[pcount];
 	  if ((codeobj[cnt].co_names->stack[type]->ref) == 0)
 	    {
@@ -602,23 +622,23 @@ call_execute (char *code)
 	    }
 	  pcount = pcount + 2;
 	  break;
-	case STORE_GLOBAL:
+	case STORE_GLOBAL:	/* store object ref to name as global */
 	  type = codeobj[cnt].code[pcount];
 	  codeobj[cnt].co_names->stack[type]->ptr = (void *) pop ();
 	  pcount = pcount + 2;
 	  break;
-	case LOAD_GLOBAL:
+	case LOAD_GLOBAL:	/* push global object onto stack */
 	  type = codeobj[cnt].code[pcount];
 	  push ((pyobject *) (codeobj[cnt].co_names->stack[type]->ptr));
 	  pcount = pcount + 2;
 	  break;
-	case ROT_TWO:
+	case ROT_TWO:		/* reposition top and second top object */
 	  temp = pop ();
 	  temp1 = pop ();
 	  push (temp);
 	  push (temp1);
 	  break;
-	case ROT_THREE:
+	case ROT_THREE:	/* repostion top on second top and first top on top and second top on first top */
 	  temp = pop ();
 	  temp1 = pop ();
 	  temp2 = pop ();
@@ -626,8 +646,7 @@ call_execute (char *code)
 	  push (temp1);
 	  push (temp2);
 	  break;
-
-	case BINARY_MULTIPLY:
+	case BINARY_MULTIPLY:	/* multiply two object and push onto stack */
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
@@ -668,7 +687,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case BINARY_DEVIDE:
+	case BINARY_DEVIDE:	/* devide tow object and push onto stack */
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
@@ -694,7 +713,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case BINARY_MODULO:
+	case BINARY_MODULO:	/* find moduloous of two object and result push onto stack  */
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
@@ -705,7 +724,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case BINARY_FLOOR_DEVIDE:
+	case BINARY_FLOOR_DEVIDE:	/* binary floor devide two object and result push onto stack */
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
@@ -731,7 +750,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case BINARY_SUBTRACT:
+	case BINARY_SUBTRACT:	/* subtract two object and result push onto stack */
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
@@ -757,7 +776,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case INPLACE_ADD:
+	case INPLACE_ADD:	/* inplace add two object and result push onto stack */
 	  temp = pop ();
 	  temp1 = pop ();
 	  if (temp1->type == 'i' && temp->type == 'i')
@@ -775,7 +794,7 @@ call_execute (char *code)
 	    }
 	  if (temp1->type == 'f' && temp->type == 'f')
 	    {
-	      temp1->fl = temp1->fl + temp1->fl;
+	      temp1->fl = temp1->fl + temp->fl;
 	    }
 	  if (temp1->type == 't' && temp->type == 't')
 	    {
@@ -783,7 +802,7 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-	case INPLACE_SUBTRACT:
+	case INPLACE_SUBTRACT:	/* inplace subtract two object and result push onto stack */
 	  temp = pop ();
 	  temp1 = pop ();
 	  if (temp1->type == 'i' && temp->type == 'i')
@@ -806,7 +825,7 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-	case INPLACE_MULTIPLY:
+	case INPLACE_MULTIPLY:	/* inplace multiply two object and result push onto stack */
 	  temp = pop ();
 	  temp1 = pop ();
 	  if (temp1->type == 'i' && temp->type == 'i')
@@ -830,7 +849,7 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-	case INPLACE_DEVIDE:
+	case INPLACE_DEVIDE:	/* inplace devide two object and result push onto stack */
 	  temp = pop ();
 	  temp1 = pop ();
 	  if (temp1->type == 'i' && temp->type == 'i')
@@ -852,7 +871,7 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-	case INPLACE_MODULO:
+	case INPLACE_MODULO:	/* find inplace modulous of two objects and result push onto stack */
 	  temp = pop ();
 	  temp1 = pop ();
 	  if (temp1->type == 'i' && temp->type == 'i')
@@ -861,7 +880,7 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-	case BINARY_LSHIFT:
+	case BINARY_LSHIFT:	/* left shift int object */
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
@@ -872,7 +891,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case BINARY_RSHIFT:
+	case BINARY_RSHIFT:	/* right an integer object  */
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
@@ -883,7 +902,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case BINARY_AND:
+	case BINARY_AND:	/* find and of two objects */
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
@@ -894,7 +913,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case BINARY_XOR:
+	case BINARY_XOR:	/* find xor value of two objects and result push onto stack */
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
@@ -905,7 +924,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case BINARY_OR:
+	case BINARY_OR:	/* find bonary or of two objects and result push onto stack */
 	  result = create_new_object ();
 	  temp = pop ();
 	  temp1 = pop ();
@@ -916,7 +935,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case INPLACE_RSHIFT:
+	case INPLACE_RSHIFT:	/* inplace rshift an object */
 	  temp = pop ();
 	  temp1 = pop ();
 	  if (temp1->type == 'i' && temp->type == 'i')
@@ -925,7 +944,7 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-	case INPLACE_LSHIFT:
+	case INPLACE_LSHIFT:	/* inplace left shift of an object */
 	  temp = pop ();
 	  temp1 = pop ();
 	  if (temp1->type == 'i' && temp->type == 'i')
@@ -934,7 +953,7 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-	case INPLACE_AND:
+	case INPLACE_AND:	/* findinplace and of object */
 	  temp = pop ();
 	  temp1 = pop ();
 	  if (temp1->type == 'i' && temp->type == 'i')
@@ -943,7 +962,7 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-	case INPLACE_OR:
+	case INPLACE_OR:	/* find inplace or of objects */
 	  temp = pop ();
 	  temp1 = pop ();
 	  if (temp1->type == 'i' && temp->type == 'i')
@@ -952,7 +971,7 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-	case INPLACE_XOR:
+	case INPLACE_XOR:	/* find inplace xor of objects */
 	  temp = pop ();
 	  temp1 = pop ();
 	  if (temp1->type == 'i' && temp->type == 'i')
@@ -961,7 +980,7 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-	case COMPARE_OP:
+	case COMPARE_OP:	/* basic compare operation <, <=, > , >=, ==, != and store result as bool type object and push result onto stack */
 	  type = codeobj[cnt].code[pcount];
 	  result = create_new_object ();
 	  result->type = 'b';
@@ -1142,12 +1161,12 @@ call_execute (char *code)
 	  pcount = pcount + 2;
 	  push (result);
 	  break;
-	case BUILD_LIST:
+	case BUILD_LIST:	/* pop required objects from stack and make a list and push onto stack */
 	  type = codeobj[cnt].code[pcount];
 	  result = create_new_list (type);
 	  push (result);
 	  break;
-	case JUMP_IF_FALSE:
+	case JUMP_IF_FALSE:	/* jump to instruction if object value is false */
 	  type = codeobj[cnt].code[pcount];
 	  result = pop ();
 	  if (result->type == 'b')
@@ -1162,7 +1181,7 @@ call_execute (char *code)
 		}
 	    }
 	  break;
-	case JUMP_IF_TRUE:
+	case JUMP_IF_TRUE:	/* jump to instruction if object value is true */
 	  type = codeobj[cnt].code[pcount];
 	  result = pop ();
 	  if (result->type == 'b')
@@ -1178,14 +1197,15 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case JUMP_FORWARD:
+	case JUMP_FORWARD:	/* jump forward according to oparg */
 	  type = codeobj[cnt].code[pcount];
 	  pcount = pcount + type + 2;
 	  break;
-	case JUMP_ABSOLUTE:
-	  pcount = codeobj[cnt].code[pcount];
+	case JUMP_ABSOLUTE:	/* jump to a particular intruction */
+	  type = codeobj[cnt].code[pcount];
+	  pcount = type;
 	  break;
-	case UNARY_POSETIVE:
+	case UNARY_POSETIVE:	/* make object +ve */
 	  result = pop ();
 	  if (result->type == 'i')
 	    {
@@ -1197,7 +1217,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case UNARY_NEGATIVE:
+	case UNARY_NEGATIVE:	/* make object -ve */
 	  result = pop ();
 	  if (result->type == 'i')
 	    {
@@ -1209,7 +1229,7 @@ call_execute (char *code)
 	    }
 	  push (result);
 	  break;
-	case UNARY_NOT:
+	case UNARY_NOT:	/* make object to logic not */
 	  result = pop ();
 	  temp = create_new_object ();
 	  if (result->type == 'i')
@@ -1224,7 +1244,7 @@ call_execute (char *code)
 	    }
 	  push (temp);
 	  break;
-	case UNARY_INVERT:
+	case UNARY_INVERT:	/* invert object */
 	  result = pop ();
 	  if (result->type == 'i')
 	    {
@@ -1233,15 +1253,14 @@ call_execute (char *code)
 	  push (result);
 	  break;
 	case SETUP_LOOP:
-	  type = codeobj[cnt].code[pcount];
 	  pcount = pcount + 2;
 	  break;
-	case POP_TOP:
+	case POP_TOP:		/* pop out top most object from stack */
 	  pop ();
 	  break;
 	case POP_BLOCK:
 	  break;
-	case MAKE_FUNCTION:
+	case MAKE_FUNCTION:	/* make function */
 	  result = pop ();
 	  if (result->type == 'c')
 	    {
@@ -1250,9 +1269,9 @@ call_execute (char *code)
 	    }
 	  pcount = pcount + 2;
 	  break;
-	case CALL_FUNCTION:
+	case CALL_FUNCTION:	/* call a particularfunction by oparg */
 	  type = codeobj[cnt].code[pcount];
-	  if (type == 1)
+	  if (type == 1)	/* store input arg for function on varname */
 	    {
 	      arg1 = pop ();
 	      codeobj[1].co_varname->stack[0]->ptr = (void *) arg1;
@@ -1285,21 +1304,19 @@ call_execute (char *code)
 	      codeobj[1].co_varname->stack[3]->ptr = (void *) arg4;
 	    }
 	  result = pop ();
-
-	  mainstack[stackcount - 1].pcount = pcount;
+	  /*   if(codeobj[0].stacksize < codeobj[1].stacksize) {
+	     mainstack->stack = increm_stack(codeobj[1].stacksize); }
+	     mainstack->top = 0;
+	     mainstack->size = codeobj[1].stacksize; */
+	  mainstack[stackcount - 1].pcount = pcount;	/* store state of call function */
 	  mainstack[stackcount - 1].cnt = cnt;
-
-	  if ((mainstack =
-	       create_new_localstack (codeobj[1].stacksize)) == NULL)
+	  if ((mainstack = create_new_localstack (codeobj[1].stacksize)) == NULL)	/* create a local stack for called function */
 	    {
 	      printf ("alloc error @1327\n");
 	    }
-
-
 	  cnt = 1;
-
-	  call_execute (codeobj[cnt].code);
-	  cnt = mainstack[stackcount - 2].cnt;
+	  call_execute (codeobj[cnt].code);	/* calling the function to be exec */
+	  cnt = mainstack[stackcount - 2].cnt;	/* recovering the call function state */
 	  pcount = mainstack[stackcount - 2].pcount;
 	  --stackcount;
 	  pcount = pcount + 2;
@@ -1313,7 +1330,7 @@ call_execute (char *code)
 
 /* read long value */
 long
-r_value (int n, FILE * p)
+r_value (int n, FILE * p)	/* recovering original value fron memory and store as long and return */
 {
   long x = -1;
   const unsigned char *buf;
@@ -1325,7 +1342,7 @@ r_value (int n, FILE * p)
       x |= (long) buf[2] << 16;
       x |= (long) buf[3] << 24;
 #if SIZEOF_LONG > 4
-      x |= -(x & 0x80000000L);
+      x |= -(x & 0x80000000L);	/*only for 64 bit */
 #endif
     }
   return x;
@@ -1333,7 +1350,7 @@ r_value (int n, FILE * p)
 
 /* read string of bytes */
 static char *
-r_bytes (int n, FILE * p)
+r_bytes (int n, FILE * p)	/* read bytes */
 {
   static char *b;
   b = (char *) malloc (n * sizeof (char));
@@ -1343,7 +1360,7 @@ r_bytes (int n, FILE * p)
 
 /* read one byte */
 char
-r_byte (FILE * p)
+r_byte (FILE * p)		/* read single byte */
 {
   char b;
   fread (&b, 1, 1, p);
@@ -1361,7 +1378,7 @@ push (pyobject * item)
     }
   else
     {
-      //printf("error: stack full, can't push\n");
+      printf ("error: stack full, can't push\n");
     }
 }
 
@@ -1376,7 +1393,7 @@ pop (void)
     }
   else
     {
-      //printf("error: stack empty\n");
+      printf ("error: stack empty\n");
     }
 }
 
@@ -1402,7 +1419,12 @@ create_new_datastack (int size)
 /* create new local stack for hold object reference for execution */
 STACK *
 create_new_localstack (int size)
-{
+{				/*
+				   STACK *new;  
+				   new->top = 0;
+				   new->size = size;
+				   new->stack = (pyobject **) malloc(size * sizeof(pyobject *));
+				   return new; */
   STACK *new;
   if (stackcount == 0)
     {
@@ -1500,6 +1522,7 @@ create_new_codeobj (CODEOBJECT * codeobj)
   return new;
 }
 
+/* pop object from called function stack and push onto callee stack as a return value */
 void
 pushback (void)
 {
@@ -1514,4 +1537,13 @@ pushback (void)
       mainstack[stackcount - 2].stack[(mainstack[stackcount - 2].top)++] =
 	result;
     }
+}
+
+/* increment stack size */
+pyobject **
+increm_stack (int size)
+{
+  pyobject **new;
+  new = realloc (mainstack->stack, size);
+  return new;
 }
