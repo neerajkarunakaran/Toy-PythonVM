@@ -6,11 +6,11 @@ all:pyvm
 pyvm: pymain.o operation.o
 	$CC pymain.o operation.o
 
-pymain.o: pymain.c opearation.c pyvm.h opcod.h
-	$CC $CFLAGS pymain.c operation.c pyvm.h opcod.h
+pymain.o:pyvm.h opcod.h operation.c pymain.c
+	$CC $CFLAGS pyvm.h opcod.h operation.c pymain.c
 
-operation.o: operation.c operation.h pyvm.h
-	$CC $CFLAGS operation.c pyvm.h 
+operation.o:pyvm.h operation.c
+	$CC $CFLAGS pyvm.h operation.c
 
 
 
