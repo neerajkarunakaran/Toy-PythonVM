@@ -27,17 +27,19 @@ typedef struct STACK_t
 {
   int top;
   int size;
-  int pcount;
-  int cnt;
+
+
   pyobject **stack;
 } STACK;
 /* function state record stack */
-typedef struct call
+struct call_stack
 {
+  int top;
+  int size;
   int pcount;
   int cnt;
-  pyobject *ret;
-} CALLSTACK;
+  pyobject **stack;
+} mainstack[100];
 /* increase stack size */
 pyobject **increm_stack (int size);
 /* codeobject */
@@ -64,7 +66,7 @@ typedef struct codeobject_t
 } CODEOBJECT;
 static int cnt;
 static CODEOBJECT *codeobj;
-static STACK *mainstack;
+
 void call_execute (char *code);
 void read_file (FILE * fp);
 CODEOBJECT *create_new_codeobj (CODEOBJECT * codeobj);
@@ -77,7 +79,8 @@ void push (pyobject * item);
 pyobject *pop (void);
 static int newpcount;
 static int newcnt;
-STACK *create_new_localstack (int size);
+static int totalstack;
+void create_new_localstack (int size);
 void pushblock (char *code);
 char *popblock (void);
 pyobject *create_new_object ();
@@ -91,13 +94,14 @@ main (int argc, char **argv)
   stackcount = 0;
   cnt = -1;
   int type;
+  totalstack = 100;
   int magic;
   /* input arguments checking */
   if ((argc < 2) || (argc > 2))
     {
       perror ("usage: enter file name, or too many arguments");
       exit (1);
-    }
+    }  
   printf
     ("****************************Python 2.7.12 ******************************\n\n");
   fp = fopen (argv[1], "rb");
@@ -105,7 +109,7 @@ main (int argc, char **argv)
     {
       printf ("can't open file %s\n", argv[1]);
       exit (1);
-    }
+    }  
   //  codeobj = create_new_codeobj(); 
   //   ++codeobjcount;
   //  codeobj = create_new_codeobj();
@@ -124,11 +128,15 @@ main (int argc, char **argv)
   read_file (fp);
   printf
     ("Executing %s............................................................\n",
-     codeobj[cnt].filename);
-  if ((mainstack = create_new_localstack (codeobj[cnt].stacksize)) == NULL)
-    {
-      printf ("alloc error @ 135\n");
-    }
+     codeobj[cnt].filename); 
+ /* if(( mainstack = (STACK *) malloc(totalstack* sizeof(STACK))) == NULL){
+    printf("alloc error @ 131\n");
+  } */
+  
+  create_new_localstack (codeobj[cnt].stacksize);
+
+
+   
   /* function for recursively execute all codeobjects  */
   call_execute (codeobj[cnt].code);
   return 0;
@@ -164,11 +172,11 @@ read_file (FILE * fp)
   codeobj[cnt].codesize = (int) r_value (4, fp);
   // printf("codesize = %d\n", codeobj[cnt].codesize);
   codeobj[cnt].code = r_bytes (codeobj[cnt].codesize, fp);
-  /*for (i = 0; i < codeobj[cnt].codesize; i++)
+  for (i = 0; i < codeobj[cnt].codesize; i++)
      {
      printf ("%d\n", codeobj[cnt].code[i]);
      }
-     printf ("###\n");  */
+     printf ("###\n");  
   type = r_byte (fp);
   /* get co_const size */
   codeobj[cnt].constsize = r_value (4, fp);
@@ -220,7 +228,7 @@ read_file (FILE * fp)
 	}
     }
   /* print all consts */
-/*
+
   printf ("consts (");
   if (codeobj[cnt].constsize)
     {
@@ -257,7 +265,7 @@ read_file (FILE * fp)
       printf (" ");
     }
   printf (")\n");
-*/
+
   type = r_byte (fp);
   if (type == '(')
     {
@@ -292,7 +300,7 @@ read_file (FILE * fp)
 	}
     }
   /* print names */
-/*
+
   printf ("names(");
   if (codeobj[cnt].namesize)
     {
@@ -318,7 +326,7 @@ read_file (FILE * fp)
       printf (" ");
     }
   printf (")\n");
-*/
+
   r_byte (fp);
   /* get varnamesize */
   codeobj[cnt].varnamesize = (int) r_value (4, fp);
@@ -346,7 +354,7 @@ read_file (FILE * fp)
 	}
     }
   /* print varnames */
-/*
+
   printf ("varname (");
   if (codeobj[cnt].varnamesize)
     {
@@ -368,7 +376,7 @@ read_file (FILE * fp)
       printf (" ");
     }
   printf (")\n");
-*/
+
   r_byte (fp);
   /* get free varsize */
   codeobj[cnt].freevarsize = (int) r_value (4, fp);
@@ -396,7 +404,7 @@ read_file (FILE * fp)
 	}
     }
   /* print freevar */
-/*
+
   printf ("freevar (");
   if (codeobj[cnt].freevarsize)
     {
@@ -418,7 +426,7 @@ read_file (FILE * fp)
       printf (" ");
     }
   printf (")\n");
-*/
+
   r_byte (fp);
   /* get cellvar size */
   codeobj[cnt].cellvarsize = (int) r_value (4, fp);
@@ -446,7 +454,7 @@ read_file (FILE * fp)
 	}
     }
   /* print cellvar */
-/*
+
   printf ("cellvar (");
   if (codeobj[cnt].cellvarsize)
     {
@@ -468,13 +476,13 @@ read_file (FILE * fp)
       printf (" ");
     }
   printf (")\n");
-*/
+
   if ((type = r_byte (fp)) == 's')
     {
       stringsize = (int) r_value (4, fp);
       /* filename read */
       codeobj[cnt].filename = r_bytes (stringsize, fp);
-      //     printf("filename: %s\n", codeobj[cnt].filename);
+           printf("filename: %s\n", codeobj[cnt].filename);
     }
   type = r_byte (fp);
   if (type == 't')
@@ -482,15 +490,16 @@ read_file (FILE * fp)
       stringsize = (int) r_value (4, fp);
       /* functionname read */
       codeobj[cnt].functionname = r_bytes (stringsize, fp);
-      //     printf("functionname : %s\n", codeobj[cnt].functionname);
+           printf("functionname : %s\n", codeobj[cnt].functionname);
     }
   if (type == 'R')
     {
       codeobj[cnt].functionname = r_bytes (4, fp);
+      printf("functionname : %s\n", codeobj[cnt].functionname);
     }
   /* read firstline number */
   codeobj[cnt].firstlineno = (int) r_value (4, fp);
-  //   printf("firstlineno : %d\n", codeobj[cnt].firstlineno);
+     printf("firstlineno : %d\n", codeobj[cnt].firstlineno);
   type = r_byte (fp);
   stringsize = (int) r_value (4, fp);
   r_bytes (stringsize, fp);
@@ -499,10 +508,10 @@ read_file (FILE * fp)
 /* recursively execute all codeobjects */
 void
 call_execute (char *code)
-{
+{ 
   pyobject *temp, *temp1, *temp2, *result, *arg1, *arg2, *arg3, *arg4;
   int i, pcount, type, codecount, stringsize;
-  pcount = 0;
+  pcount = 0; 
   /* loop over all instructions */
   while (pcount < codeobj[cnt].codesize)
     {
@@ -757,7 +766,7 @@ call_execute (char *code)
 	  if (temp1->type == 'i' && temp->type == 'i')
 	    {
 	      result->type = 'i';
-	      result->value = (temp1->value) - (temp->value);
+	      result->value = (temp1->value) - (temp->value);  
 	    }
 	  if (temp1->type == 'i' && temp->type == 'f')
 	    {
@@ -1269,7 +1278,7 @@ call_execute (char *code)
 	    }
 	  pcount = pcount + 2;
 	  break;
-	case CALL_FUNCTION:	/* call a particularfunction by oparg */
+	case CALL_FUNCTION:	/* call a particularfunction by oparg */  
 	  type = codeobj[cnt].code[pcount];
 	  if (type == 1)	/* store input arg for function on varname */
 	    {
@@ -1309,12 +1318,15 @@ call_execute (char *code)
 	     mainstack->top = 0;
 	     mainstack->size = codeobj[1].stacksize; */
 	  mainstack[stackcount - 1].pcount = pcount;	/* store state of call function */
-	  mainstack[stackcount - 1].cnt = cnt;
-	  if ((mainstack = create_new_localstack (codeobj[1].stacksize)) == NULL)	/* create a local stack for called function */
-	    {
-	      printf ("alloc error @1327\n");
-	    }
+	  mainstack[stackcount - 1].cnt = cnt; 
+	  /*create_new_localstack (codeobj[cnt].stacksize)) == NULL)	 create a local stack for called function */
+
+
+
 	  cnt = 1;
+      create_new_localstack (codeobj[cnt].stacksize);
+      mainstack[stackcount - 1].pcount = 0;
+      mainstack[stackcount - 1].cnt = cnt;
 	  call_execute (codeobj[cnt].code);	/* calling the function to be exec */
 	  cnt = mainstack[stackcount - 2].cnt;	/* recovering the call function state */
 	  pcount = mainstack[stackcount - 2].pcount;
@@ -1372,9 +1384,9 @@ void
 push (pyobject * item)
 {
   if (mainstack[stackcount - 1].top < mainstack[stackcount - 1].size)
-    {
+    { 
       mainstack[stackcount - 1].stack[(mainstack[stackcount - 1].top)++] =
-	item;
+	item;  
     }
   else
     {
@@ -1417,14 +1429,14 @@ create_new_datastack (int size)
 }
 
 /* create new local stack for hold object reference for execution */
-STACK *
+void
 create_new_localstack (int size)
 {				/*
 				   STACK *new;  
 				   new->top = 0;
 				   new->size = size;
 				   new->stack = (pyobject **) malloc(size * sizeof(pyobject *));
-				   return new; */
+				   return new; 
   STACK *new;
   if (stackcount == 0)
     {
@@ -1441,17 +1453,28 @@ create_new_localstack (int size)
 	  exit (1);
 	}
       ++stackcount;
-    }
-  else
+    }  
+  
     {
       if ((new =
 	   realloc (mainstack, (stackcount + 1) * sizeof (STACK))) != NULL)
 	{
 	  new[stackcount].top = 0;
-	  new[stackcount].size = size;
-	  new[stackcount].stack =
-	    (pyobject **) malloc (size * sizeof (pyobject *));
+	  new[stackcount].size = size;   */
+    if(stackcount > 99) {
+        printf("maximum recursion depth exceeded\n");
+        exit(1);
+    }   
+
+	 if(( mainstack[stackcount].stack =
+	    (pyobject **) malloc (size * sizeof (pyobject *))) == NULL) {
+        printf("malloc error @ 1461\n");
+        exit(1); 
 	}
+    mainstack[stackcount].top = 0;
+    mainstack[stackcount].size = size; 
+    ++stackcount; 
+/*
       else
 	{
 	  printf ("alloc error @ 1389\n");
@@ -1459,7 +1482,7 @@ create_new_localstack (int size)
 	}
       ++stackcount;
     }
-  return new;
+  return new; */
 }
 
 /* create new  data object */
