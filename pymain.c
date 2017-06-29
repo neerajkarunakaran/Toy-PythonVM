@@ -31,7 +31,7 @@ typedef struct STACK_t
 
   pyobject **stack;
 } STACK;
-/* function state record stack */
+/* allowable exec stack size is 100 */
 struct call_stack
 {
   int top;
@@ -139,6 +139,7 @@ main (int argc, char **argv)
    
   /* function for recursively execute all codeobjects  */
   call_execute (codeobj[cnt].code);
+  free(mainstack[stackcount - 1].stack);
   return 0;
 }
 
@@ -172,11 +173,11 @@ read_file (FILE * fp)
   codeobj[cnt].codesize = (int) r_value (4, fp);
   // printf("codesize = %d\n", codeobj[cnt].codesize);
   codeobj[cnt].code = r_bytes (codeobj[cnt].codesize, fp);
-  for (i = 0; i < codeobj[cnt].codesize; i++)
+  /*for (i = 0; i < codeobj[cnt].codesize; i++)
      {
      printf ("%d\n", codeobj[cnt].code[i]);
      }
-     printf ("###\n");  
+     printf ("###\n");   */
   type = r_byte (fp);
   /* get co_const size */
   codeobj[cnt].constsize = r_value (4, fp);
@@ -228,7 +229,7 @@ read_file (FILE * fp)
 	}
     }
   /* print all consts */
-
+/*
   printf ("consts (");
   if (codeobj[cnt].constsize)
     {
@@ -265,7 +266,7 @@ read_file (FILE * fp)
       printf (" ");
     }
   printf (")\n");
-
+*/
   type = r_byte (fp);
   if (type == '(')
     {
@@ -300,7 +301,7 @@ read_file (FILE * fp)
 	}
     }
   /* print names */
-
+/*
   printf ("names(");
   if (codeobj[cnt].namesize)
     {
@@ -326,7 +327,7 @@ read_file (FILE * fp)
       printf (" ");
     }
   printf (")\n");
-
+*/
   r_byte (fp);
   /* get varnamesize */
   codeobj[cnt].varnamesize = (int) r_value (4, fp);
@@ -354,7 +355,7 @@ read_file (FILE * fp)
 	}
     }
   /* print varnames */
-
+/*
   printf ("varname (");
   if (codeobj[cnt].varnamesize)
     {
@@ -376,7 +377,7 @@ read_file (FILE * fp)
       printf (" ");
     }
   printf (")\n");
-
+*/
   r_byte (fp);
   /* get free varsize */
   codeobj[cnt].freevarsize = (int) r_value (4, fp);
@@ -404,7 +405,7 @@ read_file (FILE * fp)
 	}
     }
   /* print freevar */
-
+/*
   printf ("freevar (");
   if (codeobj[cnt].freevarsize)
     {
@@ -426,7 +427,7 @@ read_file (FILE * fp)
       printf (" ");
     }
   printf (")\n");
-
+*/
   r_byte (fp);
   /* get cellvar size */
   codeobj[cnt].cellvarsize = (int) r_value (4, fp);
@@ -454,7 +455,7 @@ read_file (FILE * fp)
 	}
     }
   /* print cellvar */
-
+/*
   printf ("cellvar (");
   if (codeobj[cnt].cellvarsize)
     {
@@ -476,13 +477,13 @@ read_file (FILE * fp)
       printf (" ");
     }
   printf (")\n");
-
+*/
   if ((type = r_byte (fp)) == 's')
     {
       stringsize = (int) r_value (4, fp);
       /* filename read */
       codeobj[cnt].filename = r_bytes (stringsize, fp);
-           printf("filename: %s\n", codeobj[cnt].filename);
+      //     printf("filename: %s\n", codeobj[cnt].filename);
     }
   type = r_byte (fp);
   if (type == 't')
@@ -490,16 +491,16 @@ read_file (FILE * fp)
       stringsize = (int) r_value (4, fp);
       /* functionname read */
       codeobj[cnt].functionname = r_bytes (stringsize, fp);
-           printf("functionname : %s\n", codeobj[cnt].functionname);
+        //   printf("functionname : %s\n", codeobj[cnt].functionname);
     }
   if (type == 'R')
     {
       codeobj[cnt].functionname = r_bytes (4, fp);
-      printf("functionname : %s\n", codeobj[cnt].functionname);
+     // printf("functionname : %s\n", codeobj[cnt].functionname);
     }
   /* read firstline number */
   codeobj[cnt].firstlineno = (int) r_value (4, fp);
-     printf("firstlineno : %d\n", codeobj[cnt].firstlineno);
+    // printf("firstlineno : %d\n", codeobj[cnt].firstlineno);
   type = r_byte (fp);
   stringsize = (int) r_value (4, fp);
   r_bytes (stringsize, fp);
@@ -522,7 +523,7 @@ call_execute (char *code)
 	  break;
 	case LOAD_CONST:	/* load const to stack */
 	  type = codeobj[cnt].code[pcount];
-	  push (codeobj[cnt].co_const->stack[type]);
+	  push (codeobj[cnt].co_const->stack[type]); 
 	  pcount = pcount + 2;
 	  break;
 	case STORE_NAME:	/* store ref of object to a name object */
@@ -541,7 +542,7 @@ call_execute (char *code)
 	  pcount = pcount + 2;
 	  break;
 	case LOAD_FAST:	/* load varname contain ref of object to stack */
-	  type = codeobj[cnt].code[pcount];
+	  type = codeobj[cnt].code[pcount]; 
 	  push ((pyobject *) (codeobj[cnt].co_varname->stack[type]->ptr));
 	  pcount = pcount + 2;
 	  break;
@@ -617,6 +618,10 @@ call_execute (char *code)
 	  if (stackcount > 1)
 	    {
 	      pushback ();
+          free(mainstack[--stackcount].stack); /*clear the current stack and operation back on to previous stack */
+          cnt = mainstack[stackcount - 1].cnt;
+          pcount = mainstack[stackcount - 1].pcount + 2;
+          
 	    }
 	  break;
 	case DELETE_NAME:	/* delete name from name list */
@@ -990,10 +995,10 @@ call_execute (char *code)
 	  push (temp1);
 	  break;
 	case COMPARE_OP:	/* basic compare operation <, <=, > , >=, ==, != and store result as bool type object and push result onto stack */
-	  type = codeobj[cnt].code[pcount];
+	  type = codeobj[cnt].code[pcount]; 
 	  result = create_new_object ();
-	  result->type = 'b';
-	  temp = pop ();
+	  result->type = 'b'; 
+	  temp = pop (); 
 	  temp1 = pop ();
 	  if (type == 0)
 	    {
@@ -1046,12 +1051,12 @@ call_execute (char *code)
 		}
 	    }
 	  if (type == 2)
-	    {
-	      if (temp->type == 'i')
+	    { 
+	      if (temp->type == 'i') 
 		{
 		  if (temp1->value == temp->value)
 		    {
-		      result->boolvalue = true;
+		      result->boolvalue = true; 
 		    }
 		  else
 		    {
@@ -1167,7 +1172,7 @@ call_execute (char *code)
 		    }
 		}
 	    }
-	  pcount = pcount + 2;
+	  pcount = pcount + 2; 
 	  push (result);
 	  break;
 	case BUILD_LIST:	/* pop required objects from stack and make a list and push onto stack */
@@ -1182,11 +1187,11 @@ call_execute (char *code)
 	    {
 	      if (result->boolvalue == false)
 		{
-		  pcount = type;
+		  pcount = type; 
 		}
 	      else
 		{
-		  pcount = pcount + 2;
+		  pcount = pcount + 2; 
 		}
 	    }
 	  break;
@@ -1270,7 +1275,7 @@ call_execute (char *code)
 	case POP_BLOCK:
 	  break;
 	case MAKE_FUNCTION:	/* make function */
-	  result = pop ();
+	  result = pop (); 
 	  if (result->type == 'c')
 	    {
 	      result->string = codeobj[result->value].code;
@@ -1279,10 +1284,10 @@ call_execute (char *code)
 	  pcount = pcount + 2;
 	  break;
 	case CALL_FUNCTION:	/* call a particularfunction by oparg */  
-	  type = codeobj[cnt].code[pcount];
+	  type = codeobj[cnt].code[pcount]; 
 	  if (type == 1)	/* store input arg for function on varname */
 	    {
-	      arg1 = pop ();
+	      arg1 = pop (); 
 	      codeobj[1].co_varname->stack[0]->ptr = (void *) arg1;
 	    }
 	  if (type == 2)
@@ -1312,7 +1317,7 @@ call_execute (char *code)
 	      codeobj[1].co_varname->stack[2]->ptr = (void *) arg3;
 	      codeobj[1].co_varname->stack[3]->ptr = (void *) arg4;
 	    }
-	  result = pop ();
+	  pop ();  
 	  /*   if(codeobj[0].stacksize < codeobj[1].stacksize) {
 	     mainstack->stack = increm_stack(codeobj[1].stacksize); }
 	     mainstack->top = 0;
@@ -1325,13 +1330,16 @@ call_execute (char *code)
 
 	  cnt = 1;
       create_new_localstack (codeobj[cnt].stacksize);
-      mainstack[stackcount - 1].pcount = 0;
-      mainstack[stackcount - 1].cnt = cnt;
-	  call_execute (codeobj[cnt].code);	/* calling the function to be exec */
-	  cnt = mainstack[stackcount - 2].cnt;	/* recovering the call function state */
-	  pcount = mainstack[stackcount - 2].pcount;
-	  --stackcount;
-	  pcount = pcount + 2;
+      mainstack[stackcount - 1].pcount = 0; 
+      mainstack[stackcount - 1].cnt = cnt; 
+	  call_execute (codeobj[cnt].code);
+    	/* calling the function to be exec */
+   /*   free(mainstack[--stackcount].stack);
+	  cnt = mainstack[stackcount - 1].cnt;	
+	  pcount = mainstack[stackcount - 1].pcount; 
+  
+
+	  pcount = pcount + 2; */
 	  break;
 	default:
 	  pcount = pcount + 2;
@@ -1390,7 +1398,7 @@ push (pyobject * item)
     }
   else
     {
-      printf ("error: stack full, can't push\n");
+     // printf ("error: stack full, can't push\n");
     }
 }
 
@@ -1405,7 +1413,7 @@ pop (void)
     }
   else
     {
-      printf ("error: stack empty\n");
+     // printf ("error: stack empty\n");
     }
 }
 
@@ -1553,12 +1561,12 @@ pushback (void)
   if (mainstack[stackcount - 1].top > 0)
     {
       result =
-	mainstack[stackcount - 1].stack[--(mainstack[stackcount - 1].top)];
+	mainstack[stackcount - 1].stack[--(mainstack[stackcount - 1].top)]; 
     }
   if (mainstack[stackcount - 2].top < mainstack[stackcount - 2].size)
     {
       mainstack[stackcount - 2].stack[(mainstack[stackcount - 2].top)++] =
-	result;
+	result; 
     }
 }
 
