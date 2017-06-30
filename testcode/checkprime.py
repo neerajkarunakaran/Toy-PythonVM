@@ -1,4 +1,5 @@
 
+
 def checkprime(n):
     x = n // 2
     k = 0
