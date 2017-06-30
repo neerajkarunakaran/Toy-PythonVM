@@ -1,11 +1,5 @@
-
-
-a = 1100
-while a > 10:
+a = 1
+while a < 1000:
     print a 
-    a-=1
+    a+=2
    
-
-
-
-
