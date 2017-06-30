@@ -1291,3 +1291,10 @@ void pushback(void)
 		  2].stack[(mainstack[stackcount - 2].top)++] = result;
     }
 }
+
+/*  add two int value */
+int add(int x, int y)
+{
+    return x + y;
+}
+
