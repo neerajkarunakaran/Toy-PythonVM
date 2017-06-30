@@ -1,4 +1,3 @@
-
 print ' jvdjhdvfmasbjdb '
 def f():
     print 'mdvchbdc'
