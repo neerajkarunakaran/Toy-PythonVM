@@ -2,6 +2,7 @@
      contain two major functions... 
      read_file and call_execute...
      both are recursively call. */
+
 #include "opcod.h"		/* opcode header */
 #include "pyvm.h"		/* virtual machine header */
 #include <string.h>
@@ -10,6 +11,7 @@
 #define bool int
 #define true 1
 #define false 0
+
 /* pyobject  */
 typedef struct pyobject_t {
     int type;
@@ -21,12 +23,14 @@ typedef struct pyobject_t {
     float fl;
     int ref;
 } pyobject;
+
 /* data and execution stack */
 typedef struct STACK_t {
     int top;
     int size;
     pyobject **stack;
 } STACK;
+
 /* allowable exec stack size is 100 */
 struct call_stack {
     int top;
@@ -35,6 +39,7 @@ struct call_stack {
     int cnt;
     pyobject **stack;
 } mainstack[100];
+
 /* codeobject */
 typedef struct codeobject_t {
     int argcount;
@@ -56,6 +61,7 @@ typedef struct codeobject_t {
     STACK *co_freevar;
     STACK *co_cellvar;
 } CODEOBJECT;
+
 static int cnt;
 static CODEOBJECT *codeobj;
 void call_execute(char *code);
@@ -71,6 +77,7 @@ pyobject *pop(void);
 void create_new_localstack(int size);
 pyobject *create_new_object();
 pyobject *create_new_list(int size);
+
 int main(int argc, char **argv)
 {
     FILE *fp;
