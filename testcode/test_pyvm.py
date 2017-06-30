@@ -36,7 +36,7 @@ def sumof_digit_test(list):
     """function will test the
     sumof_digits.pyc output"""
     text = list[0]
-    expected = 27
+    expected = 24
     if int(text.strip()) == expected:
         print "sumof_digits test: passed"
     else:
