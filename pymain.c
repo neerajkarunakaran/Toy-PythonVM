@@ -38,8 +38,6 @@ struct call_stack
   int cnt;
   pyobject **stack;
 } mainstack[100];
-/* increase stack size */
-pyobject **increm_stack (int size);
 /* codeobject */
 typedef struct codeobject_t
 {
@@ -68,18 +66,13 @@ void call_execute (char *code);
 void read_file (FILE * fp);
 CODEOBJECT *create_new_codeobj (CODEOBJECT * codeobj);
 static int codeobjcount;
-static int blockcount;
+static int newcnt;
 static int stackcount;
 STACK *create_new_datastack (int size);
 void pushback (void);
 void push (pyobject * item);
 pyobject *pop (void);
-static int newpcount;
-static int newcnt;
-static int totalstack;
 void create_new_localstack (int size);
-void pushblock (char *code);
-char *popblock (void);
 pyobject *create_new_object ();
 pyobject *create_new_list (int size);
 int
@@ -87,11 +80,9 @@ main (int argc, char **argv)
 {
   FILE *fp;
   codeobjcount = 0;
-  blockcount = 0;
   stackcount = 0;
   cnt = -1;
   int type;
-  totalstack = 100;
   int magic;
   /* input arguments checking */
   if ((argc < 2) || (argc > 2))
@@ -107,9 +98,6 @@ main (int argc, char **argv)
       printf ("can't open file %s\n", argv[1]);
       exit (1);
     }
-  //  codeobj = create_new_codeobj(); 
-  //   ++codeobjcount;
-  //  codeobj = create_new_codeobj();
   magic = (int) r_value (4, fp);
   if (magic != 168686339)
     {
@@ -126,12 +114,7 @@ main (int argc, char **argv)
   printf
     ("Executing %s............................................................\n",
      codeobj[cnt].filename);
-  /* if(( mainstack = (STACK *) malloc(totalstack* sizeof(STACK))) == NULL){
-     printf("alloc error @ 131\n");
-     } */
-
   create_new_localstack (codeobj[cnt].stacksize);
-
   /* function for recursively execute all codeobjects  */
   call_execute (codeobj[cnt].code);
   free (mainstack[stackcount - 1].stack);
@@ -152,7 +135,7 @@ read_file (FILE * fp)
   ++cnt;
   /*  get argcount */
   codeobj[cnt].argcount = (int) r_value (4, fp);
-  // printf ("argcount = %d\n", codeobj[cnt].argcount);
+//printf(argcount = %d\n", codeobj[cnt].argcount);
   /* get nlocals */
   codeobj[cnt].nlocals = (int) r_value (4, fp);
   // printf ("nlocals = %d\n", codeobj[cnt].nlocals);
@@ -168,7 +151,7 @@ read_file (FILE * fp)
   codeobj[cnt].codesize = (int) r_value (4, fp);
   // printf("codesize = %d\n", codeobj[cnt].codesize);
   codeobj[cnt].code = r_bytes (codeobj[cnt].codesize, fp);
-  /*for (i = 0; i < codeobj[cnt].codesize; i++)
+  /* for (i = 0; i < codeobj[cnt].codesize; i++)
      {
      printf ("%d\n", codeobj[cnt].code[i]);
      }
@@ -616,7 +599,6 @@ call_execute (char *code)
 	      free (mainstack[--stackcount].stack);	/*clear the current stack and operation back on to previous stack */
 	      cnt = mainstack[stackcount - 1].cnt;
 	      pcount = mainstack[stackcount - 1].pcount + 2;
-
 	    }
 	  break;
 	case DELETE_NAME:	/* delete name from name list */
@@ -989,7 +971,8 @@ call_execute (char *code)
 	    }
 	  push (temp1);
 	  break;
-	case COMPARE_OP:	/* basic compare operation <, <=, > , >=, ==, != and store result as bool type object and push result onto stack */
+	case COMPARE_OP:	/* basic compare operation <, <=, > , >=, ==, != and */
+                        /* store result as bool type object and push result onto stack */
 	  type = codeobj[cnt].code[pcount];
 	  result = create_new_object ();
 	  result->type = 'b';
@@ -1189,6 +1172,19 @@ call_execute (char *code)
 		  pcount = pcount + 2;
 		}
 	    }
+	  if (result->type == 'i')
+	    {
+	      if (result->value == 0)
+		{
+		  pcount = type;
+		}
+	      else
+		{
+		  pcount = pcount + 2;
+		}
+	    }
+
+
 	  break;
 	case JUMP_IF_TRUE:	/* jump to instruction if object value is true */
 	  type = codeobj[cnt].code[pcount];
@@ -1313,24 +1309,14 @@ call_execute (char *code)
 	      codeobj[1].co_varname->stack[3]->ptr = (void *) arg4;
 	    }
 	  pop ();
-	  /*   if(codeobj[0].stacksize < codeobj[1].stacksize) {
-	     mainstack->stack = increm_stack(codeobj[1].stacksize); }
-	     mainstack->top = 0;
-	     mainstack->size = codeobj[1].stacksize; */
 	  mainstack[stackcount - 1].pcount = pcount;	/* store state of call function */
 	  mainstack[stackcount - 1].cnt = cnt;
-	  /*create_new_localstack (codeobj[cnt].stacksize)) == NULL)     create a local stack for called function */
 	  cnt = 1;
 	  create_new_localstack (codeobj[cnt].stacksize);
 	  mainstack[stackcount - 1].pcount = 0;
 	  mainstack[stackcount - 1].cnt = cnt;
 	  call_execute (codeobj[cnt].code);
 	  /* calling the function to be exec */
-	  /*   free(mainstack[--stackcount].stack);
-	     cnt = mainstack[stackcount - 1].cnt;      
-	     pcount = mainstack[stackcount - 1].pcount; 
-
-	     pcount = pcount + 2; */
 	  break;
 	default:
 	  pcount = pcount + 2;
@@ -1430,36 +1416,7 @@ create_new_datastack (int size)
 /* create new local stack for hold object reference for execution */
 void
 create_new_localstack (int size)
-{				/*
-				   STACK *new;  
-				   new->top = 0;
-				   new->size = size;
-				   new->stack = (pyobject **) malloc(size * sizeof(pyobject *));
-				   return new; 
-				   STACK *new;
-				   if (stackcount == 0)
-				   {
-				   if ((new = (STACK *) malloc (sizeof (STACK))) != NULL)
-				   {
-				   new[stackcount].top = 0;
-				   new[stackcount].size = size;
-				   new[stackcount].stack =
-				   (pyobject **) malloc (size * sizeof (pyobject *));
-				   }
-				   else
-				   {
-				   printf ("alloc error @ 1384\n");
-				   exit (1);
-				   }
-				   ++stackcount;
-				   }  
-
-				   {
-				   if ((new =
-				   realloc (mainstack, (stackcount + 1) * sizeof (STACK))) != NULL)
-				   {
-				   new[stackcount].top = 0;
-				   new[stackcount].size = size;   */
+{
   if (stackcount > 99)
     {
       printf ("maximum recursion depth exceeded\n");
@@ -1474,15 +1431,6 @@ create_new_localstack (int size)
   mainstack[stackcount].top = 0;
   mainstack[stackcount].size = size;
   ++stackcount;
-/*
-      else
-	{
-	  printf ("alloc error @ 1389\n");
-	  exit (1);
-	}
-      ++stackcount;
-    }
-  return new; */
 }
 
 /* create new  data object */
@@ -1560,13 +1508,4 @@ pushback (void)
       mainstack[stackcount - 2].stack[(mainstack[stackcount - 2].top)++] =
 	result;
     }
-}
-
-/* increment stack size */
-pyobject **
-increm_stack (int size)
-{
-  pyobject **new;
-  new = realloc (mainstack->stack, size);
-  return new;
 }
