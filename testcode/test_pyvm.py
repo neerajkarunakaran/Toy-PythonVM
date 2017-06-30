@@ -8,7 +8,7 @@ def factorial_test(list):
     if int(text.strip()) == expected:
         print "factorial test: passed"
     else:
-        print "factorial test: failed"
+        print "factorial test: failed ! expected %d" %(expected)
 
 def factor_test(list):
     """function will test the
@@ -20,7 +20,7 @@ def factor_test(list):
     if result == expected:
         print "factor_number test: passed"
     else:
-        print "factor_number test: failed"
+        print "factor_number test: failed ! expected %d" %(expected)
 
 def largest_test(list):
     """function will test the 
@@ -30,17 +30,17 @@ def largest_test(list):
     if int(text.strip()) == expected:
         print "largest test: passed"
     else:
-        print "largest test: failed"
+        print "largest test: failed! expected %d" %(expected)
 
 def sumof_digit_test(list):
     """function will test the
     sumof_digits.pyc output"""
     text = list[0]
-    expected = 25
+    expected = 27
     if int(text.strip()) == expected:
         print "sumof_digits test: passed"
     else:
-        print "sumof_digits test: failed"
+        print "sumof_digits test: failed! expected %d" %(expected)
 
 def mul_test(list):
     """function will test the
@@ -50,7 +50,7 @@ def mul_test(list):
     if int(text.strip()) == expected:
         print "mul test: passed"
     else:
-        print "mul test: failed"
+        print "mul test: failed! expected %d" %(expected)
 
 def  recursion_test(list):
     """function will test the 
@@ -60,7 +60,7 @@ def  recursion_test(list):
     if text.strip() == expected:
         print "recursion test: passed"
     else:
-        print "recursion test: failed"
+        print "recursion test: failed! expected %s" %(expected)
 
 def checkprime_test(list):
     """function will test the 
@@ -70,7 +70,7 @@ def checkprime_test(list):
     if text.strip() == expected:
         print "check prime test: passed"
     else:
-        print "check prime test: failed"
+        print "check prime test: failed! expeced %s" %(expected)
 
 
 if __name__ == '__main__':
