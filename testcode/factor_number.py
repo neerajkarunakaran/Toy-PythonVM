@@ -1,4 +1,3 @@
-
 def factors_number(n):
     print "factors of number are..."
     x = n + 1
@@ -7,5 +6,4 @@ def factors_number(n):
         if n % i == 0:
             print i
         i = i + 1
-
 factors_number(100)
