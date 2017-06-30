@@ -1,4 +1,4 @@
-/* All opcode */
+/* All opcode  */
 #define STOP_CODE  0
 #define POP_TOP    1
 #define ROT_TWO    2
