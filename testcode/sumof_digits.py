@@ -4,4 +4,4 @@ def sumof_digits(n):
         x = x + n % 10
         n = n // 10
     return x
-print sumof_digits(1213567)
+print sumof_digits(6954)
