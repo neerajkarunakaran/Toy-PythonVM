@@ -1,4 +1,3 @@
-
 def large(n1, n2, n3):
     if n1 >= n2 and n1 >= n3:
         large = n1
@@ -8,5 +7,4 @@ def large(n1, n2, n3):
         large = n3
     print "largest is"
     print large
-
 large(1234,2000,3234)
