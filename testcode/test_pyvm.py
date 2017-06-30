@@ -76,9 +76,12 @@ def checkprime_test(list):
 if __name__ == '__main__':
 
 
-    filename = sys.argv[1]    
-f = subprocess.Popen(["/home/neeraj/neerajgit/pyvm/pyvm", \
-    filename], stdout = subprocess.PIPE)
+filename = sys.argv[1]   
+try: 
+    f = subprocess.Popen(["/home/neeraj/neerajgit/pyvm/pyvm", \
+         filename], stdout = subprocess.PIPE)
+except:
+    print "error"
 list = f.stdout.readlines()
 file = filename.split(".")
 if file[0] == "checkprime":
