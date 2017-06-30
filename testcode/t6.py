@@ -1,4 +1,5 @@
 a = 8
+
 b =30
 while a < 30:
     print a
