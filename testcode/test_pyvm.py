@@ -4,7 +4,7 @@ def factorial_test(list):
     """function will test the 
     factorial.pyc output """ 
     text = list[0]
-    expected = 479001600
+    expected = 3628800
     if int(text.strip()) == expected:
         print "factorial test: passed"
     else:
@@ -76,26 +76,26 @@ def checkprime_test(list):
 if __name__ == '__main__':
 
 
-filename = sys.argv[1]   
-try: 
-    f = subprocess.Popen(["/home/neeraj/neerajgit/pyvm/pyvm", \
-         filename], stdout = subprocess.PIPE)
-except:
-    print "error"
-list = f.stdout.readlines()
-file = filename.split(".")
-if file[0] == "checkprime":
-    checkprime_test(list[3:])
-elif file[0] == "factor_number":
-    factor_test(list[3:])
-elif file[0] == "large":
-    largest_test(list[3:])
-elif file[0] == "sumof_digits":
-    sumof_digit_test(list[3:])
-elif file[0] == "factorial":
-    factorial_test(list[3:])
-elif file[0] == "mul":
-    mul_test(list[3:])
-else:
-    recursion_test(list[3:])
+    filename = sys.argv[1]   
+    try: 
+        f = subprocess.Popen(["/home/neeraj/neerajgit/pyvm/pyvm", \
+                                filename], stdout = subprocess.PIPE)
+    except:
+        print "error"
+    list = f.stdout.readlines()
+    file = filename.split(".")
+    if file[0] == "checkprime":
+        checkprime_test(list[3:])
+    elif file[0] == "factor_number":
+        factor_test(list[3:])
+    elif file[0] == "large":
+        largest_test(list[3:])
+    elif file[0] == "sumof_digits":
+        sumof_digit_test(list[3:])
+    elif file[0] == "factorial":
+        factorial_test(list[3:])
+    elif file[0] == "mul":
+        mul_test(list[3:])
+    else:
+        recursion_test(list[3:])
     
