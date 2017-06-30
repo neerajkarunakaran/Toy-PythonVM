@@ -1,9 +1,8 @@
 CC=gcc
 CFLAGS=-c -Wall
 all:pyvm
-pyvm: pymain.o operation.o
-	$CC pymain.o operation.o
-pymain.o:pyvm.h opcod.h operation.c pymain.c
-	$CC $CFLAGS pyvm.h opcod.h operation.c pymain.c
-operation.o:pyvm.h operation.c
-	$CC $CFLAGS pyvm.h operation.c
+pyvm: pymain.o 
+	$CC pymain.o 
+pymain.o:pyvm.h opcod.h pymain.c
+	$CC $CFLAGS pyvm.h opcod.h pymain.c
+	
