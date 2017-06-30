@@ -1,43 +1,7 @@
-
-
-
 #include <stdio.h>
-
-
-int add(int x, int y)
+/* add two int value */
+int
+add (int x, int y)
 {
-    return x + y;
+  return x + y;
 }
-
-
-
-
-
-
-
-
-
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
