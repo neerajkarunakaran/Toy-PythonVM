@@ -1,5 +1,5 @@
 a = 1
-while a < 1000:
+while a < 50:
     print a 
-    a+=2
+    a = a + 1
    
