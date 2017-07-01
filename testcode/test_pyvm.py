@@ -72,6 +72,14 @@ def checkprime_test(list):
     else:
         print "check prime test: failed! expeced: %s got: %s" %(expected, text.strip())
 
+def argcount_test(list):
+    text = list[0]
+    expected = 350
+    if int(text.strip()) == expected:
+        print "argcount test : passed"
+    else:
+        print "argcount test :failed! expected: %d got: %s" %(expected, text.strip())
+
 if __name__ == '__main__':
 
     files = os.listdir("/home/neeraj/neerajgit/pyvm/testcode")
@@ -99,4 +107,6 @@ if __name__ == '__main__':
                 mul_test(list[3:])
             elif file[0] == "recursion":
                 recursion_test(list[3:])
+            elif file[0] == "argcountest":
+                argcount_test(list[3:])
     
