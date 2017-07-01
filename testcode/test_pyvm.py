@@ -8,8 +8,8 @@ def factorial_test(list):
     if int(text.strip()) == expected:
         print "factorial test: passed"
     else:
-        print "factorial test: failed ! expected %d" %(expected)
-
+        print "factorial test: failed ! expected: %d got: %s" %(expected, text.strip())
+                
 def factor_test(list):
     """function will test the
     factor_number.pyc output"""
@@ -20,7 +20,7 @@ def factor_test(list):
     if result == expected:
         print "factor_number test: passed"
     else:
-        print "factor_number test: failed ! expected %d" %(expected)
+        print "factor_number test: failed ! expected: %d got : %d" %(expected, result)
 
 def largest_test(list):
     """function will test the 
@@ -30,7 +30,7 @@ def largest_test(list):
     if int(text.strip()) == expected:
         print "largest test: passed"
     else:
-        print "largest test: failed! expected %d" %(expected)
+        print "largest test: failed! expected: %d got: %s" %(expected, textstrip())
 
 def sumof_digit_test(list):
     """function will test the
@@ -40,7 +40,7 @@ def sumof_digit_test(list):
     if int(text.strip()) == expected:
         print "sumof_digits test: passed"
     else:
-        print "sumof_digits test: failed! expected %d" %(expected)
+        print "sumof_digits test: failed! expected: %d got: %s" %(expected, text.strip())
 
 def mul_test(list):
     """function will test the
@@ -50,7 +50,7 @@ def mul_test(list):
     if int(text.strip()) == expected:
         print "mul test: passed"
     else:
-        print "mul test: failed! expected %d" %(expected)
+        print "mul test: failed! expected: %d got: %s " %(expected, text.strip())
 
 def  recursion_test(list):
     """function will test the 
@@ -60,7 +60,7 @@ def  recursion_test(list):
     if text.strip() == expected:
         print "recursion test: passed"
     else:
-        print "recursion test: failed! expected %s" %(expected)
+        print "recursion test: failed! expected: %s got: %s" %(expected, text.strip())
 
 def checkprime_test(list):
     """function will test the 
@@ -70,10 +70,10 @@ def checkprime_test(list):
     if text.strip() == expected:
         print "check prime test: passed"
     else:
-        print "check prime test: failed! expeced %s" %(expected)
-
+        print "check prime test: failed! expeced: %s got: %s" %(expected, text.strip())
 
 if __name__ == '__main__':
+
     files = os.listdir("/home/neeraj/neerajgit/pyvm/testcode")
     for filename in files:
         if filename.endswith(".pyc"):
