@@ -20,7 +20,7 @@ def factor_test(list):
     if result == expected:
         print "factor_number test: passed"
     else:
-        print "factor_number test: failed ! expected: %d got : %d" %(expected, result)
+        print "factor_number test: failed ! expected: %s got : %s" %(str(expected), str(result))
 
 def largest_test(list):
     """function will test the 
@@ -73,12 +73,36 @@ def checkprime_test(list):
         print "check prime test: failed! expeced: %s got: %s" %(expected, text.strip())
 
 def argcount_test(list):
+    """ function will test the
+    argcountest.pyc output"""
     text = list[0]
     expected = 350
     if int(text.strip()) == expected:
         print "argcount test : passed"
     else:
         print "argcount test :failed! expected: %d got: %s" %(expected, text.strip())
+
+def printhello_test(list):
+    """ function will test the 
+    printhello.pyc output"""
+    text = list[0]
+    expected = "hello world !"
+    if text.strip() == expected:
+        print "print hello test: passed"
+    else:
+        print "print hello test: failed! expected: %s got: %s" %(expected, text.strip())
+
+def whileloop_test(list):
+    """function will test the 
+    whileloop.pyc output"""
+    result = []
+    expected = range(1, 50)
+    for text in list:
+        result.append(int(text.strip()))
+    if result == expected:
+        print "while loop test: passed"
+    else:
+        print "while loop test: failed! expected: %s got: %s" %(str(expected), str(result))
 
 if __name__ == '__main__':
 
@@ -109,4 +133,8 @@ if __name__ == '__main__':
                 recursion_test(list[3:])
             elif file[0] == "argcountest":
                 argcount_test(list[3:])
+            elif file[0] == "printhello":
+                printhello_test(list[3:])
+            elif file[0] == "whileloop":
+                whileloop_test(list[3:])
     
