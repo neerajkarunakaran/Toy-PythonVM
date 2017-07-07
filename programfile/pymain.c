@@ -15,13 +15,16 @@
 /* pyobject  */
 typedef struct pyobject_t {
     int type;
+    void *ptr;
+    union{
     bool boolvalue;
     void *data;
     int value;
     char *string;
-    void *ptr;
+
     float fl;
     int ref;
+    }u;
 } pyobject;
 
 /* data and execution stack */
@@ -131,13 +134,13 @@ void read_file(FILE * fp)
     ++cnt;
     /*  get argcount */
     codeobj[cnt].argcount = (int) r_value(4, fp);
-//printf(argcount = %d\n", codeobj[cnt].argcount);
+ //printf("argcount = %d\n", codeobj[cnt].argcount);
     /* get nlocals */
     codeobj[cnt].nlocals = (int) r_value(4, fp);
-    // printf ("nlocals = %d\n", codeobj[cnt].nlocals);
+   //  printf ("nlocals = %d\n", codeobj[cnt].nlocals);
     /* get stacksize */
     codeobj[cnt].stacksize = (int) r_value(4, fp);
-    //printf ("stacksize =  %d\n", codeobj[cnt].stacksize);
+   // printf ("stacksize =  %d\n", codeobj[cnt].stacksize);
     /* check for starting of bytecode string */
     while ((type = r_byte(fp)) != 's') {
 	;
@@ -168,21 +171,21 @@ void read_file(FILE * fp)
 	type = r_byte(fp);
 	if (type == 'i') {
 	    codeobj[cnt].co_const->stack[i]->type = 'i';
-	    codeobj[cnt].co_const->stack[i]->value = r_value(4, fp);
+	    codeobj[cnt].co_const->stack[i]->u.value = r_value(4, fp);
 	}
 	if (type == 'N') {
 	    codeobj[cnt].co_const->stack[i]->type = 'N';
-	    codeobj[cnt].co_const->stack[i]->value = 0;
+	    codeobj[cnt].co_const->stack[i]->u.value = 0;
 	}
 	if (type == 't' || type == 's') {
 	    stringsize = (int) r_value(4, fp);
 	    codeobj[cnt].co_const->stack[i]->type = 't';
-	    codeobj[cnt].co_const->stack[i]->string =
+	    codeobj[cnt].co_const->stack[i]->u.string =
 		r_bytes(stringsize, fp);
 	}
 	if (type == 'c') {
 	    codeobj[cnt].co_const->stack[i]->type = 'c';
-	    codeobj[cnt].co_const->stack[i]->value = codeobjcount;
+	    codeobj[cnt].co_const->stack[i]->u.value = codeobjcount;
 	    newcnt = cnt;
 	    newi = i;
 	    read_file(fp);
@@ -191,7 +194,7 @@ void read_file(FILE * fp)
 	}
 	if (type == 'f') {
 	    codeobj[cnt].co_const->stack[i]->type = 'f';
-	    codeobj[cnt].co_const->stack[i]->fl = r_value(4, fp);
+	    codeobj[cnt].co_const->stack[i]->u.fl = r_value(4, fp);
 	}
     }
     /* print all consts */
@@ -203,27 +206,27 @@ void read_file(FILE * fp)
 	{
 	  if (codeobj[cnt].co_const->stack[i]->type == 'i')
 	    {
-	      printf ("%d ", codeobj[cnt].co_const->stack[i]->value);
+	      printf ("%d ", codeobj[cnt].co_const->stack[i]->u.value);
 	    }
 	  if (codeobj[cnt].co_const->stack[i]->type == 't')
 	    {
-	      printf ("%s ", codeobj[cnt].co_const->stack[i]->string);
+	      printf ("%s ", codeobj[cnt].co_const->stack[i]->u.string);
 	    }
 	  if (codeobj[cnt].co_const->stack[i]->type == 'f')
 	    {
-	      printf ("%f ", codeobj[cnt].co_const->stack[i]->fl);
+	      printf ("%f ", codeobj[cnt].co_const->stack[i]->u.fl);
 	    }
 	  if (codeobj[cnt].co_const->stack[i]->type == 'N')
 	    {
-	      printf ("%d ", codeobj[cnt].co_const->stack[i]->value);
+	      printf ("%d ", codeobj[cnt].co_const->stack[i]->u.value);
 	    }
 	  if (codeobj[cnt].co_const->stack[i]->type == 'c')
 	    {
-	      printf ("%d ", codeobj[cnt].co_const->stack[i]->value);
+	      printf ("%d ", codeobj[cnt].co_const->stack[i]->u.value);
 	    }
       if( codeobj[cnt].co_const->stack[i]->type == 'f')
         {
-          printf("%f ", codeobj[cnt].co_const->stack[i]->fl);
+          printf("%f ", codeobj[cnt].co_const->stack[i]->u.fl);
         }
 	}
     }
@@ -249,16 +252,16 @@ void read_file(FILE * fp)
 	if (type == 't') {
 	    stringsize = (int) r_value(4, fp);
 	    codeobj[cnt].co_names->stack[i]->type = 't';
-	    codeobj[cnt].co_names->stack[i]->string =
+	    codeobj[cnt].co_names->stack[i]->u.string =
 		r_bytes(stringsize, fp);
 	}
 	if (type == 'i') {
 	    codeobj[cnt].co_names->stack[i]->type = 'i';
-	    codeobj[cnt].co_names->stack[i]->value = (int) r_value(4, fp);
+	    codeobj[cnt].co_names->stack[i]->u.value = (int) r_value(4, fp);
 	}
 	if (type == 'R') {
 	    codeobj[cnt].co_names->stack[i]->type = 'R';
-	    codeobj[cnt].co_names->stack[i]->value = (int) r_value(4, fp);
+	    codeobj[cnt].co_names->stack[i]->u.value = (int) r_value(4, fp);
 	}
     }
     /* print names */
@@ -271,15 +274,15 @@ void read_file(FILE * fp)
 	  type = codeobj[cnt].co_names->stack[i]->type;
 	  if (type == 't')
 	    {
-	      printf ("%s ", codeobj[cnt].co_names->stack[i]->string);
+	      printf ("%s ", codeobj[cnt].co_names->stack[i]->u.string);
 	    }
 	  if (type == 'i')
 	    {
-	      printf ("%d ", codeobj[cnt].co_names->stack[i]->value);
+	      printf ("%d ", codeobj[cnt].co_names->stack[i]->u.value);
 	    }
 	  if (type == 'R')
 	    {
-	      printf ("%d ", codeobj[cnt].co_names->stack[i]->value);
+	      printf ("%d ", codeobj[cnt].co_names->stack[i]->u.value);
 	    }
 	}
     }
@@ -300,13 +303,13 @@ void read_file(FILE * fp)
 	    type = r_byte(fp);
 	    if (type == 'i') {
 		codeobj[cnt].co_varname->stack[i]->type = 'i';
-		codeobj[cnt].co_varname->stack[i]->value =
+		codeobj[cnt].co_varname->stack[i]->u.value =
 		    (int) r_value(4, fp);
 	    }
 	    if (type == 't') {
 		codeobj[cnt].co_varname->stack[i]->type = 't';
 		stringsize = (int) r_value(4, fp);
-		codeobj[cnt].co_varname->stack[i]->string =
+		codeobj[cnt].co_varname->stack[i]->u.string =
 		    r_bytes(stringsize, fp);
 	    }
 	}
@@ -321,11 +324,11 @@ void read_file(FILE * fp)
 	  type = codeobj[cnt].co_varname->stack[i]->type;
 	  if (type == 'i')
 	    {
-	      printf ("%d ", codeobj[cnt].co_varname->stack[i]->value);
+	      printf ("%d ", codeobj[cnt].co_varname->stack[i]->u.value);
 	    }
 	  if (type == 't')
 	    {
-	      printf ("%s ", codeobj[cnt].co_varname->stack[i]->string);
+	      printf ("%s ", codeobj[cnt].co_varname->stack[i]->u.string);
 	    }
 	}
     }
@@ -346,13 +349,13 @@ void read_file(FILE * fp)
 	    type = r_byte(fp);
 	    if (type == 'i') {
 		codeobj[cnt].co_freevar->stack[i]->type = 'i';
-		codeobj[cnt].co_freevar->stack[i]->value =
+		codeobj[cnt].co_freevar->stack[i]->u.value =
 		    (int) r_value(4, fp);
 	    }
 	    if (type == 't') {
 		stringsize = (int) r_value(4, fp);
 		codeobj[cnt].co_freevar->stack[i]->type = 't';
-		codeobj[cnt].co_freevar->stack[i]->string =
+		codeobj[cnt].co_freevar->stack[i]->u.string =
 		    r_bytes(stringsize, fp);
 	    }
 	}
@@ -367,11 +370,11 @@ void read_file(FILE * fp)
 	  type = codeobj[cnt].co_freevar->stack[i]->type;
 	  if (type == 'i')
 	    {
-	      printf ("%d ", codeobj[cnt].co_freevar->stack[i]->value);
+	      printf ("%d ", codeobj[cnt].co_freevar->stack[i]->u.value);
 	    }
 	  if (type == 't')
 	    {
-	      printf ("%s ", codeobj[cnt].co_freevar->stack[i]->string);
+	      printf ("%s ", codeobj[cnt].co_freevar->stack[i]->u.string);
 	    }
 	}
     }
@@ -392,13 +395,13 @@ void read_file(FILE * fp)
 	    type = r_byte(fp);
 	    if (type == 'i') {
 		codeobj[cnt].co_cellvar->stack[i]->type = 'i';
-		codeobj[cnt].co_cellvar->stack[i]->value =
+		codeobj[cnt].co_cellvar->stack[i]->u.value =
 		    (int) r_value(4, fp);
 	    }
 	    if (type == 't') {
 		codeobj[cnt].co_cellvar->stack[i]->type == 't';
 		stringsize = (int) r_value(4, fp);
-		codeobj[cnt].co_cellvar->stack[i]->string =
+		codeobj[cnt].co_cellvar->stack[i]->u.string =
 		    r_bytes(stringsize, fp);
 	    }
 	}
@@ -413,11 +416,11 @@ void read_file(FILE * fp)
 	  type = codeobj[cnt].co_cellvar->stack[i]->type;
 	  if (type == 'i')
 	    {
-	      printf ("%d ", codeobj[cnt].co_cellvar->stack[i]->value);
+	      printf ("%d ", codeobj[cnt].co_cellvar->stack[i]->u.value);
 	    }
 	  if (type == 't')
 	    {
-	      printf ("%s ", codeobj[cnt].co_cellvar->stack[i]->string);
+	      printf ("%s ", codeobj[cnt].co_cellvar->stack[i]->u.string);
 	    }
 	}
     }
@@ -438,7 +441,7 @@ void read_file(FILE * fp)
 	stringsize = (int) r_value(4, fp);
 	/* functionname read */
 	codeobj[cnt].functionname = r_bytes(stringsize, fp);
-	//   printf("functionname : %s\n", codeobj[cnt].functionname);
+	  // printf("functionname : %s\n", codeobj[cnt].functionname);
     }
     if (type == 'R') {
 	codeobj[cnt].functionname = r_bytes(4, fp);
@@ -494,11 +497,11 @@ void call_execute(char *code)
 	    temp = pop();
 	    temp1 = pop();
 	    if (temp->type == 'i' && temp1->type == 'i') {
-		result->value = add(temp->value, temp1->value);
+		result->u.value = add(temp->u.value, temp1->u.value);
 		result->type = 'i';
 	    }
 	    if (temp->type == 't' && temp1->type == 't') {
-		result->string = strcat(temp1->string, temp->string);
+		result->u.string = strcat(temp1->u.string, temp->u.string);
 		result->type = 't';
 	    }
 	    push(result);
@@ -506,16 +509,16 @@ void call_execute(char *code)
 	case PRINT_ITEM:	/* pop object from stack and print it on stdout */
 	    result = pop();
 	    if (result->type == 'i') {
-		printf("%d", result->value);
+		printf("%d", result->u.value);
 	    }
 	    if (result->type == 't' || type == 's') {
-		printf("%s", result->string);
+		printf("%s", result->u.string);
 	    }
 	    if (result->type == 'f') {
-		printf("%f", result->fl);
+		printf("%f", result->u.fl);
 	    }
 	    if (result->type == 'b') {
-		if (result->boolvalue == true) {
+		if (result->u.boolvalue == true) {
 		    printf("true");
 		} else {
 		    printf("false");
@@ -525,15 +528,15 @@ void call_execute(char *code)
 		temp = result;
 		printf("[");
 		while (result != NULL) {
-		    temp = (pyobject *) (result->data);
+		    temp = (pyobject *) (result->u.data);
 		    if (temp->type == 'i') {
-			printf("%d ", temp->value);
+			printf("%d ", temp->u.value);
 		    }
 		    if (temp->type == 'f') {
-			printf("%f ", temp->fl);
+			printf("%f ", temp->u.fl);
 		    }
 		    if (temp->type == 't' || temp->type == 's') {
-			printf("%s ", temp->string);
+			printf("%s ", temp->u.string);
 		    }
 		    result = (pyobject *) (result->ptr);
 		}
@@ -553,10 +556,10 @@ void call_execute(char *code)
 	    break;
 	case DELETE_NAME:	/* delete name from name list */
 	    type = codeobj[cnt].code[pcount];
-	    if ((codeobj[cnt].co_names->stack[type]->ref) == 0) {
+	    if ((codeobj[cnt].co_names->stack[type]->u.ref) == 0) {
 		free(codeobj[cnt].co_names->stack[type]);
 	    } else {
-		--(codeobj[cnt].co_names->stack[type]->ref);
+		--(codeobj[cnt].co_names->stack[type]->u.ref);
 	    }
 	    pcount = pcount + 2;
 	    break;
@@ -589,30 +592,30 @@ void call_execute(char *code)
 	    temp = pop();
 	    temp1 = pop();
 	    if (temp->type == 'i' && temp1->type == 'i') {
-		result->value = (temp1->value) * (temp->value);
+		result->u.value = (temp1->u.value) * (temp->u.value);
 		result->type = 'i';
 	    }
 	    if (temp1->type == 'i' && temp->type == 'f') {
 		result->type = 'f';
-		result->fl = (temp1->value) * (temp->fl);
+		result->u.fl = (temp1->u.value) * (temp->u.fl);
 	    }
 	    if (temp1->type == 'f' && temp->type == 'i') {
 		result->type = 'f';
-		result->fl = (temp1->fl) * (temp->value);
+		result->u.fl = (temp1->u.fl) * (temp->u.value);
 	    }
 	    if (temp1->type == 'f' && temp->type == 'f') {
 		result->type = 'f';
-		result->fl = (temp1->fl) * (temp->fl);
+		result->u.fl = (temp1->u.fl) * (temp->u.fl);
 	    }
 	    if (temp1->type == 't' && temp->type == 'i') {
-		stringsize = strlen(temp1->string);
-		stringsize = stringsize * (temp->value);
-		if ((result->string =
+		stringsize = strlen(temp1->u.string);
+		stringsize = stringsize * (temp->u.value);
+		if ((result->u.string =
 		     (char *) malloc(sizeof(char) * stringsize)) == NULL) {
 		    printf("error: realloc @293\n");
 		}
-		for (i = 0; i < (temp->value); i++) {
-		    strcat(result->string, temp1->string);
+		for (i = 0; i < (temp->u.value); i++) {
+		    strcat(result->u.string, temp1->u.string);
 		}
 		result->type = 't';
 	    }
@@ -624,19 +627,19 @@ void call_execute(char *code)
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
 		result->type = 'i';
-		result->value = (temp1->value) / (temp->value);
+		result->u.value = (temp1->u.value) / (temp->u.value);
 	    }
 	    if (temp1->type == 'i' && temp->type == 'f') {
 		result->type = 'f';
-		result->fl = (temp1->value) / (temp->fl);
+		result->u.fl = (temp1->u.value) / (temp->u.fl);
 	    }
 	    if (temp1->type == 'f' && temp->type == 'i') {
 		result->type = 'f';
-		result->fl = (temp1->fl) / (temp->value);
+		result->u.fl = (temp1->u.fl) / (temp->u.value);
 	    }
 	    if (temp1->type == 'f' && temp->type == 'f') {
 		result->type = 'f';
-		result->fl = (temp1->fl) / (temp->fl);
+		result->u.fl = (temp1->u.fl) / (temp->u.fl);
 	    }
 	    push(result);
 	    break;
@@ -646,7 +649,7 @@ void call_execute(char *code)
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
 		result->type = 'i';
-		result->value = (temp1->value) % (temp->value);
+		result->u.value = (temp1->u.value) % (temp->u.value);
 	    }
 	    push(result);
 	    break;
@@ -656,19 +659,19 @@ void call_execute(char *code)
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
 		result->type = 'i';
-		result->value = (temp1->value) / (temp->value);
+		result->u.value = (temp1->u.value) / (temp->u.value);
 	    }
 	    if (temp1->type == 'i' && temp->type == 'f') {
 		result->type = 'i';
-		result->value = ((temp1->value) / (int) (temp->fl));
+		result->u.value = ((temp1->u.value) / (int) (temp->u.fl));
 	    }
 	    if (temp1->type == 'f' && temp->type == 'i') {
 		result->type = 'i';
-		result->value = ((int) (temp1->fl) / (temp->value));
+		result->u.value = ((int) (temp1->u.fl) / (temp->u.value));
 	    }
 	    if (temp1->type == 'f' && temp->type == 'f') {
 		result->type = 'i';
-		result->value = ((int) (temp1->fl) / (int) (temp->fl));
+		result->u.value = ((int) (temp1->u.fl) / (int) (temp->u.fl));
 	    }
 	    push(result);
 	    break;
@@ -678,19 +681,19 @@ void call_execute(char *code)
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
 		result->type = 'i';
-		result->value = (temp1->value) - (temp->value);
+		result->u.value = (temp1->u.value) - (temp->u.value);
 	    }
 	    if (temp1->type == 'i' && temp->type == 'f') {
 		result->type = 'f';
-		result->fl = (temp1->value) - (temp->fl);
+		result->u.fl = (temp1->u.value) - (temp->u.fl);
 	    }
 	    if (temp1->type == 'f' && temp->type == 'i') {
 		result->type = 'f';
-		result->fl = (temp1->fl) - (temp->value);
+		result->u.fl = (temp1->u.fl) - (temp->u.value);
 	    }
 	    if (temp1->type == 'f' && temp->type == 'f') {
 		result->type = 'f';
-		result->fl = (temp1->fl) - (temp->fl);
+		result->u.fl = (temp1->u.fl) - (temp->u.fl);
 	    }
 	    push(result);
 	    break;
@@ -698,20 +701,20 @@ void call_execute(char *code)
 	    temp = pop();
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
-		temp1->value = temp1->value + temp->value;
+		temp1->u.value = temp1->u.value + temp->u.value;
 	    }
 	    if (temp1->type == 'i' && temp->type == 'f') {
 		temp1->type = 'f';
-		temp1->fl = (float) (temp1->value) + temp->fl;
+		temp1->u.fl = (float) (temp1->u.value) + temp->u.fl;
 	    }
 	    if (temp1->type == 'f' && temp->type == 'i') {
-		temp1->fl = temp1->fl + (float) (temp->value);
+		temp1->u.fl = temp1->u.fl + (float) (temp->u.value);
 	    }
 	    if (temp1->type == 'f' && temp->type == 'f') {
-		temp1->fl = temp1->fl + temp->fl;
+		temp1->u.fl = temp1->u.fl + temp->u.fl;
 	    }
 	    if (temp1->type == 't' && temp->type == 't') {
-		temp1->string = strcat(temp1->string, temp->string);
+		temp1->u.string = strcat(temp1->u.string, temp->u.string);
 	    }
 	    push(temp1);
 	    break;
@@ -719,18 +722,18 @@ void call_execute(char *code)
 	    temp = pop();
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
-		temp1->value = temp1->value - temp->value;
+		temp1->u.value = temp1->u.value - temp->u.value;
 	    }
 	    if (temp1->type == 'i' && temp->type == 'f') {
 		temp1->type = 'f';
-		temp1->fl = (float) (temp1->value) - temp->fl;
+		temp1->u.fl = (float) (temp1->u.value) - temp->u.fl;
 	    }
 	    if (temp1->type == 'f' && temp->type == 'i') {
 		temp1->type = 'f';
-		temp1->fl = temp1->fl - (float) (temp->value);
+		temp1->u.fl = temp1->u.fl - (float) (temp->u.value);
 	    }
 	    if (temp1->type == 'f' && temp->type == 'f') {
-		temp1->fl = temp1->fl - temp->fl;
+		temp1->u.fl = temp1->u.fl - temp->u.fl;
 	    }
 	    push(temp1);
 	    break;
@@ -739,18 +742,18 @@ void call_execute(char *code)
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
 		temp1->type = 'i';
-		temp1->value = temp1->value * temp->value;
+		temp1->u.value = temp1->u.value * temp->u.value;
 	    }
 	    if (temp1->type == 'i' && temp->type == 'f') {
 		temp1->type = 'f';
-		temp1->fl = (float) (temp1->value) * temp->fl;
+		temp1->u.fl = (float) (temp1->u.value) * temp->u.fl;
 	    }
 	    if (temp1->type == 'f' && temp->type == 'i') {
 		temp1->type == 'f';
-		temp1->fl = temp1->fl * (float) (temp->value);
+		temp1->u.fl = temp1->u.fl * (float) (temp->u.value);
 	    }
 	    if (temp1->type == 'f' && temp->type == 'f') {
-		temp1->fl = temp1->fl * temp->fl;
+		temp1->u.fl = temp1->u.fl * temp->u.fl;
 	    }
 	    push(temp1);
 	    break;
@@ -758,17 +761,17 @@ void call_execute(char *code)
 	    temp = pop();
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
-		temp1->value = temp1->value / temp->value;
+		temp1->u.value = temp1->u.value / temp->u.value;
 	    }
 	    if (temp1->type == 'i' && temp->type == 'f') {
 		temp1->type == 'f';
-		temp1->fl = (float) (temp1->value) / temp->fl;
+		temp1->u.fl = (float) (temp1->u.value) / temp->u.fl;
 	    }
 	    if (temp1->type == 'f' && temp->type == 'i') {
-		temp1->fl = temp1->fl / (float) (temp->value);
+		temp1->u.fl = temp1->u.fl / (float) (temp->u.value);
 	    }
 	    if (temp1->type == 'f' && temp->type == 'f') {
-		temp1->fl = temp1->fl / temp->fl;
+		temp1->u.fl = temp1->u.fl / temp->u.fl;
 	    }
 	    push(temp1);
 	    break;
@@ -776,7 +779,7 @@ void call_execute(char *code)
 	    temp = pop();
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
-		temp1->value = temp1->value % temp->value;
+		temp1->u.value = temp1->u.value % temp->u.value;
 	    }
 	    push(temp1);
 	    break;
@@ -786,7 +789,7 @@ void call_execute(char *code)
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
 		result->type = 'i';
-		result->value = temp1->value << temp->value;
+		result->u.value = temp1->u.value << temp->u.value;
 	    }
 	    push(result);
 	    break;
@@ -796,7 +799,7 @@ void call_execute(char *code)
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
 		result->type = 'i';
-		result->value = temp1->value >> temp->value;
+		result->u.value = temp1->u.value >> temp->u.value;
 	    }
 	    push(result);
 	    break;
@@ -806,7 +809,7 @@ void call_execute(char *code)
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
 		result->type = 'i';
-		result->value = temp1->value & temp->value;
+		result->u.value = temp1->u.value & temp->u.value;
 	    }
 	    push(result);
 	    break;
@@ -816,7 +819,7 @@ void call_execute(char *code)
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
 		result->type = 'i';
-		result->value = temp1->value ^ temp->value;
+		result->u.value = temp1->u.value ^ temp->u.value;
 	    }
 	    push(result);
 	    break;
@@ -826,7 +829,7 @@ void call_execute(char *code)
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
 		result->type = 'i';
-		result->value = temp1->value | temp->value;
+		result->u.value = temp1->u.value | temp->u.value;
 	    }
 	    push(result);
 	    break;
@@ -834,7 +837,7 @@ void call_execute(char *code)
 	    temp = pop();
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
-		temp1->value = temp1->value >> temp->value;
+		temp1->u.value = temp1->u.value >> temp->u.value;
 	    }
 	    push(temp1);
 	    break;
@@ -842,7 +845,7 @@ void call_execute(char *code)
 	    temp = pop();
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
-		temp1->value = temp1->value << temp->value;
+		temp1->u.value = temp1->u.value << temp->u.value;
 	    }
 	    push(temp1);
 	    break;
@@ -850,7 +853,7 @@ void call_execute(char *code)
 	    temp = pop();
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
-		temp1->value = temp1->value & temp->value;
+		temp1->u.value = temp1->u.value & temp->u.value;
 	    }
 	    push(temp1);
 	    break;
@@ -858,7 +861,7 @@ void call_execute(char *code)
 	    temp = pop();
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
-		temp1->value = temp1->value | temp->value;
+		temp1->u.value = temp1->u.value | temp->u.value;
 	    }
 	    push(temp1);
 	    break;
@@ -866,7 +869,7 @@ void call_execute(char *code)
 	    temp = pop();
 	    temp1 = pop();
 	    if (temp1->type == 'i' && temp->type == 'i') {
-		temp1->value = temp1->value ^ temp->value;
+		temp1->u.value = temp1->u.value ^ temp->u.value;
 	    }
 	    push(temp1);
 	    break;
@@ -879,111 +882,111 @@ void call_execute(char *code)
 	    temp1 = pop();
 	    if (type == 0) {
 		if (temp->type == 'i') {
-		    if (temp1->value < temp->value) {
-			result->boolvalue = true;
+		    if (temp1->u.value < temp->u.value) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 		if (temp->type == 'f') {
-		    if (temp1->fl < temp->fl) {
-			result->boolvalue = true;
+		    if (temp1->u.fl < temp->u.fl) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 	    }
 	    if (type == 1) {
 		if (temp->type == 'i') {
-		    if (temp1->value <= temp->value) {
-			result->boolvalue = true;
+		    if (temp1->u.value <= temp->u.value) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 		if (temp->type == 'f') {
-		    if (temp1->fl <= temp->fl) {
-			result->boolvalue = true;
+		    if (temp1->u.fl <= temp->u.fl) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 	    }
 	    if (type == 2) {
 		if (temp->type == 'i') {
-		    if (temp1->value == temp->value) {
-			result->boolvalue = true;
+		    if (temp1->u.value == temp->u.value) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 		if (temp->type == 'f') {
-		    if (temp1->fl == temp->fl) {
-			result->boolvalue = true;
+		    if (temp1->u.fl == temp->u.fl) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 		if (temp->type == 't' || temp->type == 's') {
-		    if (strcmp(temp1->string, temp->string) == 0) {
-			result->boolvalue = true;
+		    if (strcmp(temp1->u.string, temp->u.string) == 0) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 	    }
 	    if (type == 3) {
 		if (temp->type == 'i') {
-		    if (temp1->value != temp->value) {
-			result->boolvalue = true;
+		    if (temp1->u.value != temp->u.value) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 		if (temp->type == 'f') {
-		    if (temp1->fl != temp->fl) {
-			result->boolvalue = true;
+		    if (temp1->u.fl != temp->u.fl) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 		if (temp->type == 't' || temp->type == 's') {
-		    if (strcmp(temp1->string, temp->string) != 0) {
-			result->boolvalue = true;
+		    if (strcmp(temp1->u.string, temp->u.string) != 0) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 	    }
 	    if (type == 4) {
 		if (temp->type == 'i') {
-		    if (temp1->value > temp->value) {
-			result->boolvalue = true;
+		    if (temp1->u.value > temp->u.value) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 		if (temp->type == 'f') {
-		    if (temp1->fl > temp->fl) {
-			result->boolvalue = true;
+		    if (temp1->u.fl > temp->u.fl) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 	    }
 	    if (type == 5) {
 		if (temp->type == 'i') {
-		    if (temp1->value >= temp->value) {
-			result->boolvalue = true;
+		    if (temp1->u.value >= temp->u.value) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 		if (temp->type == 'f') {
-		    if (temp1->fl >= temp->fl) {
-			result->boolvalue = true;
+		    if (temp1->u.fl >= temp->u.fl) {
+			result->u.boolvalue = true;
 		    } else {
-			result->boolvalue = false;
+			result->u.boolvalue = false;
 		    }
 		}
 	    }
@@ -999,14 +1002,14 @@ void call_execute(char *code)
 	    type = codeobj[cnt].code[pcount];
 	    result = pop();
 	    if (result->type == 'b') {
-		if (result->boolvalue == false) {
+		if (result->u.boolvalue == false) {
 		    pcount = type;
 		} else {
 		    pcount = pcount + 2;
 		}
 	    }
 	    if (result->type == 'i') {
-		if (result->value == 0) {
+		if (result->u.value == 0) {
 		    pcount = type;
 		} else {
 		    pcount = pcount + 2;
@@ -1019,7 +1022,7 @@ void call_execute(char *code)
 	    type = codeobj[cnt].code[pcount];
 	    result = pop();
 	    if (result->type == 'b') {
-		if (result->boolvalue == true) {
+		if (result->u.boolvalue == true) {
 		    pcount = type;
 		} else {
 		    pcount = pcount + 2;
@@ -1038,20 +1041,20 @@ void call_execute(char *code)
 	case UNARY_POSETIVE:	/* make object +ve */
 	    result = pop();
 	    if (result->type == 'i') {
-		result->value = (result->value) + 1;
+		result->u.value = (result->u.value) + 1;
 	    }
 	    if (result->type == 'f') {
-		result->fl = (result->fl) + 1;
+		result->u.fl = (result->u.fl) + 1;
 	    }
 	    push(result);
 	    break;
 	case UNARY_NEGATIVE:	/* make object -ve */
 	    result = pop();
 	    if (result->type == 'i') {
-		result->value = (result->value) - 1;
+		result->u.value = (result->u.value) - 1;
 	    }
 	    if (result->type == 'f') {
-		result->fl = (result->fl) - 1;
+		result->u.fl = (result->u.fl) - 1;
 	    }
 	    push(result);
 	    break;
@@ -1060,18 +1063,18 @@ void call_execute(char *code)
 	    temp = create_new_object();
 	    if (result->type == 'i') {
 		temp->type = 'i';
-		temp->value = !(result->value);
+		temp->u.value = !(result->u.value);
 	    }
 	    if (result->type == 'f') {
 		temp->type == 'f';
-		temp->fl = !(result->fl);
+		temp->u.fl = !(result->u.fl);
 	    }
 	    push(temp);
 	    break;
 	case UNARY_INVERT:	/* invert object */
 	    result = pop();
 	    if (result->type == 'i') {
-		result->value = ~(result->value);
+		result->u.value = ~(result->u.value);
 	    }
 	    push(result);
 	    break;
@@ -1086,7 +1089,7 @@ void call_execute(char *code)
 	case MAKE_FUNCTION:	/* make function */
 	    result = pop();
 	    if (result->type == 'c') {
-		result->string = codeobj[result->value].code;
+		result->u.string = codeobj[result->u.value].code;
 		push(result);
 	    }
 	    pcount = pcount + 2;
@@ -1248,12 +1251,12 @@ pyobject *create_new_list(int size)
 	if (head == NULL) {
 	    head = create_new_object();
 	    head->type = '[';
-	    head->data = (void *) pop();
+	    head->u.data = (void *) pop();
 	    head->ptr = NULL;
 	} else {
 	    current = create_new_object();
 	    current->type = '[';
-	    current->data = (void *) pop();
+	    current->u.data = (void *) pop();
 	    current->ptr = (void *) head;
 	    head = current;
 	}
