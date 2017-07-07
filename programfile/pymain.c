@@ -2,7 +2,6 @@
      contain two major functions... 
      read_file and call_execute...
      both are recursively call.  */
-
 #include "opcod.h"		/* opcode header */
 #include "pyvm.h"		/* virtual machine header */
 #include <string.h>
@@ -11,29 +10,25 @@
 #define bool int
 #define true 1
 #define false 0
-
 /* pyobject  */
 typedef struct pyobject_t {
     int type;
     void *ptr;
-    union{
-    bool boolvalue;
-    void *data;
-    int value;
-    char *string;
-
-    float fl;
-    int ref;
-    }u;
+    union {
+	bool boolvalue;
+	void *data;
+	int value;
+	char *string;
+	float fl;
+	int ref;
+    } u;
 } pyobject;
-
 /* data and execution stack */
 typedef struct STACK_t {
     int top;
     int size;
     pyobject **stack;
 } STACK;
-
 /* allowable exec stack size is 100 */
 struct call_stack {
     int top;
@@ -42,7 +37,6 @@ struct call_stack {
     int cnt;
     pyobject **stack;
 } mainstack[100];
-
 /* codeobject */
 typedef struct codeobject_t {
     int argcount;
@@ -64,7 +58,6 @@ typedef struct codeobject_t {
     STACK *co_freevar;
     STACK *co_cellvar;
 } CODEOBJECT;
-
 static int cnt;
 static CODEOBJECT *codeobj;
 void call_execute(char *code);
@@ -80,7 +73,6 @@ pyobject *pop(void);
 void create_new_localstack(int size);
 pyobject *create_new_object();
 pyobject *create_new_list(int size);
-
 int main(int argc, char **argv)
 {
     FILE *fp;
@@ -134,13 +126,13 @@ void read_file(FILE * fp)
     ++cnt;
     /*  get argcount */
     codeobj[cnt].argcount = (int) r_value(4, fp);
- //printf("argcount = %d\n", codeobj[cnt].argcount);
+    //printf("argcount = %d\n", codeobj[cnt].argcount);
     /* get nlocals */
     codeobj[cnt].nlocals = (int) r_value(4, fp);
-   //  printf ("nlocals = %d\n", codeobj[cnt].nlocals);
+    //  printf ("nlocals = %d\n", codeobj[cnt].nlocals);
     /* get stacksize */
     codeobj[cnt].stacksize = (int) r_value(4, fp);
-   // printf ("stacksize =  %d\n", codeobj[cnt].stacksize);
+    // printf ("stacksize =  %d\n", codeobj[cnt].stacksize);
     /* check for starting of bytecode string */
     while ((type = r_byte(fp)) != 's') {
 	;
@@ -257,11 +249,13 @@ void read_file(FILE * fp)
 	}
 	if (type == 'i') {
 	    codeobj[cnt].co_names->stack[i]->type = 'i';
-	    codeobj[cnt].co_names->stack[i]->u.value = (int) r_value(4, fp);
+	    codeobj[cnt].co_names->stack[i]->u.value =
+		(int) r_value(4, fp);
 	}
 	if (type == 'R') {
 	    codeobj[cnt].co_names->stack[i]->type = 'R';
-	    codeobj[cnt].co_names->stack[i]->u.value = (int) r_value(4, fp);
+	    codeobj[cnt].co_names->stack[i]->u.value =
+		(int) r_value(4, fp);
 	}
     }
     /* print names */
@@ -441,7 +435,7 @@ void read_file(FILE * fp)
 	stringsize = (int) r_value(4, fp);
 	/* functionname read */
 	codeobj[cnt].functionname = r_bytes(stringsize, fp);
-	  // printf("functionname : %s\n", codeobj[cnt].functionname);
+	// printf("functionname : %s\n", codeobj[cnt].functionname);
     }
     if (type == 'R') {
 	codeobj[cnt].functionname = r_bytes(4, fp);
@@ -671,7 +665,8 @@ void call_execute(char *code)
 	    }
 	    if (temp1->type == 'f' && temp->type == 'f') {
 		result->type = 'i';
-		result->u.value = ((int) (temp1->u.fl) / (int) (temp->u.fl));
+		result->u.value =
+		    ((int) (temp1->u.fl) / (int) (temp->u.fl));
 	    }
 	    push(result);
 	    break;
@@ -1015,8 +1010,6 @@ void call_execute(char *code)
 		    pcount = pcount + 2;
 		}
 	    }
-
-
 	    break;
 	case JUMP_IF_TRUE:	/* jump to instruction if object value is true */
 	    type = codeobj[cnt].code[pcount];
@@ -1300,4 +1293,3 @@ int add(int x, int y)
 {
     return x + y;
 }
-
